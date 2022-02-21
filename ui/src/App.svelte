@@ -8,10 +8,10 @@
 
   import logo from "./assets/logo.svg";
 
-  import { colors } from './colors';
+  import Colors from './colors';
 
   let cssColorVariables: string;
-  $: cssColorVariables = Object.entries(colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
+  $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
 </script>
 
 <main style={cssColorVariables}>

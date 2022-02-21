@@ -1,7 +1,7 @@
 <script lang="ts">
     import Icon from "./Icon.svelte";
     import {location} from 'svelte-spa-router'
-    import { colors } from '../colors';
+    import Colors from '../colors';
     
     export let url: string;
     export let icon: string;
@@ -11,7 +11,7 @@
 </script>
 
 <li class:active>
-    <a href={`#${url}`}><Icon name={icon} color={ active ? colors.source : colors.icon } /></a>
+    <a href={`#${url}`}><Icon name={icon} color={ active ? Colors.source : Colors.icon } /></a>
 </li>
 
 <style>

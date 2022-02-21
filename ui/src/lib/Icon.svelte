@@ -1,6 +1,8 @@
 <script lang="ts">
+    import Colors, { Color } from '../colors';
+
     export let name: string;
-    export let color = "#b7bac8";
+    export let color: Color = Colors.icon;
     export let size = 24;
 </script>
 

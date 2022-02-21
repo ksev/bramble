@@ -3,7 +3,7 @@
 
     import Icon from '../lib/Icon.svelte';
     import Source from '../lib/Source.svelte';
-    import { colors } from '../colors';
+    import Colors from '../colors';
 </script>
 
 <div in:fade={{duration: 100}}>
@@ -44,15 +44,15 @@
 
     <div class="ledger">
         <div>
-            <Icon name="microchip" color={colors.source} size={18} />
+            <Icon name="microchip" color={Colors.source} size={18} />
             <span>Source</span>
         </div>
         <div>
-            <Icon name="microchip" color={colors.sink} size={18} />
+            <Icon name="microchip" color={Colors.sink} size={18} />
             <span>Sink</span>
         </div>
         <div>
-            <Icon name="microchip" color={colors.sourcesink} size={18} />
+            <Icon name="microchip" color={Colors.sourcesink} size={18} />
             <span>SourceSink</span>
         </div>
     </div>
