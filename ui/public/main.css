@@ -1,0 +1,27 @@
+html, body, #app {
+    padding: 0;
+    margin: 0;
+
+    height: 100%;
+    width: 100%;
+
+    font-family: 'Roboto', sans-serif;
+    color: #b7bac8;
+}
+
+ol, ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+h1, h2,h3 {
+    margin: 0;
+    padding: 0;
+}
+
+canvas {
+    padding: 0;
+    margin: 0;
+    display: block;
+}
