@@ -43,9 +43,14 @@
         margin-top: 3px;
     }
 
-    .name {
-        padding: 6px;        
+    .item > div {
+        border-radius: 2px;
         background-color: var(--container);
+        white-space: nowrap;
+    }
+
+    .name {
+        padding: 6px;    
     }
 
     .feedback {
@@ -53,7 +58,6 @@
         padding: 0;
         margin: 0;
         box-sizing: border-box;
-        background-color: var(--container);
         display: flex;
         justify-content: stretch;
         align-items: stretch;
@@ -61,22 +65,16 @@
 
     .value {
         padding: 6px;
-
-        background-color: var(--container);
         white-space: nowrap;
     }
 
     .since {
         padding: 6px;
-
-        background-color: var(--container);
         white-space: nowrap;
     }
 
     .icon {
         padding: 6px;
-
-        background-color: var(--container);
         display: flex;
         justify-content: center;
         align-items: center;

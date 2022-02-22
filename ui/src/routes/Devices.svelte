@@ -79,7 +79,8 @@
 
     h1 {
         font-size: 30px;  
-        color: var(--strong);      
+        color: var(--strong);    
+        text-shadow: 2px 2px rgba(255,255,255,0.25);
     }
     
     strong {
@@ -125,6 +126,7 @@
 
     .empty {
         background-color: var(--container);
+        border-radius: 2px;
         margin-top: 3px;
         box-sizing: border-box;
         padding: 24px;
