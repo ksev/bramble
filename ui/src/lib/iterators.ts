@@ -1,9 +1,17 @@
+/**
+ * A generator that generates a monotonic squence of numbers starting with 0
+ */
 export function* monotonic() {
     for(let i = 0;;i++) {
         yield i;
     }
 }
 
+/**
+ * Map over an Iterators values to transform them
+ * @param it Iterator 
+ * @param callback Function to transform the value in the iterator
+ */
 export function* map<T, O>(it: Iterable<T>, callback: (data: T, index?: number) => O) {
     let index = 0;
 
@@ -12,6 +20,12 @@ export function* map<T, O>(it: Iterable<T>, callback: (data: T, index?: number) 
     }
 }
 
+/**
+ * Flatmap over an Iterators values, return a new iterator based on value, that iterator is then exhausted inline to 
+ * "flatten" then stream 
+ * @param it Iterator
+ * @param callback Function to transform the value in the iterator
+ */
 export function* flatMap<T, O>(it: Iterable<T>, callback: (data: T, index?: number) => Iterable<O>) {
     let index = 0;
 
@@ -23,6 +37,11 @@ export function* flatMap<T, O>(it: Iterable<T>, callback: (data: T, index?: numb
     }
 }
 
+/**
+ * Take only n amount of values from the iterator, it read the iterator to N or end depending which comes first
+ * @param it Iterator
+ * @param n The number of values to read
+ */
 export function* take<T>(it: IterableIterator<T>, n: number) {
     for (let i = 0; i < n; i++) {
         const r = it.next();
@@ -35,22 +54,37 @@ export function* take<T>(it: IterableIterator<T>, n: number) {
     }
 }
 
-export function next<T>(value: IterableIterator<T>): T | null {
-    const n = value.next();
+/**
+ * Pop the next value in the iterator, to go from iterator world to reified values
+ * A convenience function
+ * @param it Iterator
+ * @returns The value or undefined if the Iterator was empty
+ */
+export function pop<T>(it: IterableIterator<T>): T | undefined {
+    const n = it.next();
 
     if (n.done === true) {
-        return null;
+        return undefined;
     }
     
     return n.value;
 }   
 
+/**
+ * Repeat a value n number of times before the Generator is exhausted
+ * @param value The value to repeat
+ * @param n The number of times to repeat
+ */
 export function* repeat<T>(value: T, n: number) {
     for(let i = 0; i < n; i++) {
         yield value;
     }
 }
 
+/**
+ * Chain multiple Iterators togeather forming one big Iterator that exhausts the sub-iterators one by one
+ * @param args The iterators to add together
+ */
 export function* chain<T>(...args: Iterable<T>[]){
     for(const it of args) {
         for(const v of it) {
@@ -59,8 +93,14 @@ export function* chain<T>(...args: Iterable<T>[]){
     }
 }
 
+/**
+ * Iterate of an iterator using a sliding window aproach.
+ * Values a going to be yielded in groups of N until the iterator is exhausted
+ * @param it Iterator
+ * @param size The size of the window
+ */
 export function* window<T>(it: IterableIterator<T>, size: number) {
-    let stack = Array.from(take(it, 4));
+    let stack = Array.from(take(it, size));
 
     // Yield first window
     yield stack;
@@ -79,7 +119,7 @@ export function* catmull(it: IterableIterator<[number, number]>, length: number,
         return;
     }
 
-    const first = next(it);
+    const first = pop(it);
 
     const points = chain(
         repeat(first, 2),
