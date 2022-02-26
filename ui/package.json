@@ -21,7 +21,7 @@
     "vite": "^2.8.0"
   },
   "dependencies": {
-    "svelte-spa-router": "^3.0.4",
-    "color": "^3.0.3"
+    "color": "^3.0.3",
+    "svelte-spa-router": "^3.0.4"
   }
 }

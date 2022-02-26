@@ -2,13 +2,13 @@
   import Router from 'svelte-spa-router';  
 	import routes from './routes';
 
-  import Icon from "./lib/Icon.svelte";
-  import MainMenu from "./lib/MainMenu.svelte";
-  import MenuItem from "./lib/MenuItem.svelte";
+  import Icon from "$lib/Icon.svelte";
+  import MainMenu from "$lib/MainMenu.svelte";
+  import MenuItem from "$lib/MenuItem.svelte";
 
   import logo from "./assets/logo.svg";
 
-  import Colors from './colors';
+  import Colors from '$data/colors';
 
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');

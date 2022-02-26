@@ -30,8 +30,7 @@
     <div class="feedback">
         <Sparkline data={datapoints} color={color.fade(0.3)} /> 
     </div>
-    <div class="value">{datapoints[datapoints.length-1]?.toFixed(2) ?? 'n/a'} °C</div>
-    <div class="since">&lt; 1m</div>    
+    <div class="value">{datapoints[datapoints.length-1]?.toFixed(2) ?? 'n/a'} °C</div>  
 </div>
 
 <style>
@@ -64,11 +63,6 @@
     }
 
     .value {
-        padding: 6px;
-        white-space: nowrap;
-    }
-
-    .since {
         padding: 6px;
         white-space: nowrap;
     }

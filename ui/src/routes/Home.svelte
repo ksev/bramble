@@ -3,5 +3,5 @@
 </script>
 
 <div in:fade={{duration: 100}}>
-    Dashboard
+    <h1>Dashboard</h1>
 </div>

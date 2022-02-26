@@ -1,4 +1,6 @@
 <script lang="ts">
+import { pop } from 'svelte-spa-router';
+
     import Colors, { Color } from '../colors';
     import * as Iter from './iterators';
 
@@ -51,7 +53,7 @@
             grad.addColorStop(0.985, color.toString());
             grad.addColorStop(1.0, Colors.transparent.toString());
 
-            const fillgrad = ctx.createLinearGradient(0, 0, 0, containerHeight + 10);
+            const fillgrad = ctx.createLinearGradient(0, 0, 0, containerHeight+1);
 
             fillgrad.addColorStop(0, color.toString());
             fillgrad.addColorStop(1, Colors.transparent.toString());
@@ -77,7 +79,7 @@
 
             const spline = Iter.catmull(coords, data.length, tension);
 
-            const [[firstX, firstY]] = spline.next().value as Iter.CatmullOutput;
+            const [[firstX, firstY]] = Iter.pop(spline);
 
             ctx.moveTo(firstX, firstY);
                     
