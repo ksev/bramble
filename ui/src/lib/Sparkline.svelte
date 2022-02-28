@@ -1,8 +1,8 @@
 <script lang="ts">
 import { pop } from 'svelte-spa-router';
 
-    import Colors, { Color } from '../colors';
-    import * as Iter from './iterators';
+    import Colors, { Color } from '../data/colors';
+    import * as Iter from '../data/iterators';
 
     export let data: number[];
     export let color: Color;

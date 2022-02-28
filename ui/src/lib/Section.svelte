@@ -1,4 +1,10 @@
-<section>
+<script lang="ts">
+    import type { Color } from '$data/colors';
+
+    export let color: Color | string;
+</script>
+
+<section style="--section-color: {color.toString()}">
     <h2><slot name="headline"></slot></h2>
 
     <div>
@@ -13,10 +19,10 @@
     }
 
     section h2 {
-        color: var(--device);
+        color: var(--section-color);
     }
 
     section > div {
-        border-top: 2px solid var(--device);
+        border-top: 2px solid var(--section-color);
     }
 </style>

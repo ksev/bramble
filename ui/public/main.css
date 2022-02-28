@@ -58,3 +58,14 @@ strong {
 section {
     margin-top: 12px;
 }
+
+input {
+    font-size: inherit;
+    font-family: inherit;
+    color: inherit;
+}
+
+button {
+    border: none;
+    color: inherit;
+}

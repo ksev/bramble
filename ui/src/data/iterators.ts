@@ -8,6 +8,24 @@ export function* monotonic() {
 }
 
 /**
+ * Gives an exponentially larger number every iteration to the max
+ * @param start The starting number and base number for exponential growth
+ * @param max The max number allowed, defaults to MAX_SAFE_INTEGER
+ */
+export function* exponential(start: number, max: number = Number.MAX_SAFE_INTEGER) {
+    for (let i = 0;; i++) {
+        const num = start * Math.pow(2, i);
+
+        if (isNaN(num) || num > max) {
+            yield max;
+            continue;
+        }
+
+        yield num;
+    }
+} 
+
+/**
  * Map over an Iterators values to transform them
  * @param it Iterator 
  * @param callback Function to transform the value in the iterator

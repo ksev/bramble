@@ -3,8 +3,8 @@ import Color from 'color';
 export default {
     background: Color("#1f1f33"),
     strong: Color("#fafafa"),
-    container: Color("#2b2b40"),
-    fadedtext: Color("#818493"),
+    container: Color("rgb(64, 64, 81)"),
+    fadedtext: Color("rgb(159, 161, 172)"),
     icon: Color("#b7bac8"),
     device: Color("#6cb6ff"),
     source: Color("#6c6dff"),

@@ -27,3 +27,6 @@ dist-ssr
 *.sw?
 
 target
+
+*_generated*
+ui/src/net/protocol

@@ -8,7 +8,7 @@
     import Icon from '$lib/Icon.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
 
-    import Colors from '$data/colors';
+    import Colors, { Color } from '$data/colors';
 
     const virtualGradient = `linear-gradient(180deg, ${Colors.source} 50%, ${Colors.sink} 90%)`;
 </script>
@@ -22,12 +22,12 @@
         Pellentesque viverra a est id consequat. 
     </p>
 
-    <Section>
-        <span slot="headline">Manual</span>
+    <Section color={Colors.device}>
+        <span slot="headline">Direct</span>
 
         <div slot="content">
             <p>
-                Lorem ipsum dolor <strong>Manual</strong> sit amet, consectetur adipiscing elit. 
+                Lorem ipsum dolor <strong>Direct</strong> sit amet, consectetur adipiscing elit. 
                 Sed purus nibh, dictum sit amet urna id, bibendum dapibus metus.
                 Pellentesque viverra a est id consequat. 
             </p>
@@ -36,15 +36,16 @@
                 <SubMenu>
                     <a class="integration" href="#/device/add/mqtt">
                         <span>MQTT</span>
+                        <!--
                         <div class="integration-summary">
                             <div class="stat">
                                 <Icon name="microchip" size={16} color={Colors.device} />
-                                <strong>5</strong> 
+                                <strong>1</strong> 
                                 Devices
                             </div>
                             <div class="stat">
                                 <Icon name="activity" size={16} color={Colors.source} />
-                                <strong>12</strong> 
+                                <strong>5</strong> 
                                 Sources
                             </div>
                             <div class="stat">
@@ -53,6 +54,7 @@
                                 Sinks
                             </div>
                         </div>
+                        -->
                         <img src={Mqtt} alt="Zigbee2MQTT" />
                     </a>
 
@@ -65,7 +67,7 @@
         </div>
     </Section>
 
-    <Section>
+    <Section color={Colors.device}>
         <span slot="headline">Integration</span>
         <div slot="content">
             <p>
@@ -78,27 +80,6 @@
                 <SubMenu>
                     <a class="integration" href="#/device/add/zigbee2mqtt">
                         <span>Zigbee2MQTT</span>
-                        <img src={Zigbee2Mqtt} alt="Zigbee2MQTT" />
-                    </a>
-                    <a class="integration" href="#/device/add/zigbee2mqtt">
-                        <span>Zigbee2MQTT</span>
-                        <div class="integration-summary">
-                            <div class="stat">
-                                <Icon name="microchip" size={16} color={Colors.device} />
-                                <strong>5</strong> 
-                                Devices
-                            </div>
-                            <div class="stat">
-                                <Icon name="activity" size={16} color={Colors.source} />
-                                <strong>12</strong> 
-                                Sources
-                            </div>
-                            <div class="stat">
-                                <Icon name="archive" size={16} color={Colors.sink} />
-                                <strong>2</strong> 
-                                Sinks
-                            </div>
-                        </div>
                         <img src={Zigbee2Mqtt} alt="Zigbee2MQTT" />
                     </a>
                 </SubMenu>
@@ -123,6 +104,8 @@
         height: 75px;
     }
 
+    /*
+
     .integration-summary {
         display: flex;
         flex-direction: column; 
@@ -135,6 +118,8 @@
         gap: 6px;
         align-items: center;
     }
+
+    */
 
     .wrap {
         margin-top: 24px;

@@ -10,44 +10,71 @@
 
   import Colors from '$data/colors';
 
+  import { pipe } from './net/pipe';
+  
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
 </script>
 
 <main style={cssColorVariables}>
-  <menubar>    
-    <div>
-      <img width="48" src={logo} alt="Rome"/>      
-    </div>
+  {#if $pipe.tag === "connecting" && $pipe.delay > 250}
+  <div class="error">
+    ERROR: Could not connect to Rome service
+  </div>
+  {/if}
+  <div class="main2">
+    <menubar>    
+      <div>
+        <img width="48" src={logo} alt="Rome"/>      
+      </div>
 
-    <div class="name">Rome</div>
+      <div class="name">Rome</div>
 
-    <div class="main-menu">
-      <MainMenu>
-        <MenuItem url="/" icon="home" />
-        <MenuItem url="/devices" icon="microchip" />
-        <MenuItem url="/settings" icon="settings-alt" />
-      </MainMenu>
-    </div>
+      <div class="main-menu">
+        <MainMenu>
+          <MenuItem url="/" icon="home" />
+          <MenuItem url="/devices" icon="microchip" />
+          <MenuItem url="/settings" icon="settings-alt" />
+        </MainMenu>
+      </div>
 
-    <div class="grow"></div>
+      <div class="grow"></div>
 
-    <Icon name="log-out" />
-  </menubar>
+      <Icon name="log-out" />
+    </menubar>
 
-  <section>
-    <Router {routes} />
-  </section>
+    <section>
+      <Router {routes} />
+    </section>
+  </div>
 </main>
 
 <div style=""></div>
 
 <style>
   main {
-    background-color: var(--background);
     min-height: 100%;
     display: flex;
+    flex-direction: column;
+  }
+
+  .main2 {
+    background-color: var(--background);
+    display: flex;
     position: relative;
+    flex-grow: 1;
+  }
+
+  .error {
+    padding: 12px;
+    text-align: center;
+    color: var(--strong);
+    font-weight: bold;
+    font-size: 16px;
+
+    background-color: rgb(244, 98, 98);
+    border-bottom: 1px solid #f98383;
+    text-shadow: 2px 2px rgba(255,255,255,0.25);
   }
 
   .name {

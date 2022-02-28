@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from './Icon.svelte';
-    import Colors, { Color } from '../colors';
+    import Colors, { Color } from '../data/colors';
     import Sparkline from './Sparkline.svelte';
 
     export let sensor: "source" | "sink" | "sourcesink";

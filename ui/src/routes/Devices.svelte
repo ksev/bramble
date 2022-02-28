@@ -27,6 +27,7 @@
         </SubMenu>
       
         <div class="grow"></div>
+        
         <div class="ledger">
             <div>
                 <Icon name="activity" color={Colors.source} size={18} />
@@ -43,7 +44,7 @@
         </div>
     </div>
 
-    <Section>
+    <Section color={Colors.device}>
         <span slot="headline">Devices</span>
 
         <div class="empty" slot="content">
