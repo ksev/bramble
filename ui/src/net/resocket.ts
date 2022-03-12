@@ -1,66 +1,47 @@
 import { exponential } from "../data/iterators";
 import { debug } from "$data/log";
+import { readable } from "svelte/store";
 
-export type ReSocketState =
-    | { tag: "connected" }
-    | { tag: "closed" }
-    | { tag: "connecting"; delay: number };
+/**
+ * A websocket that always tries to be connected
+ * Does exponential backoff, the value will either be a number to the next try or a WebSocket instance
+ */
+export const resocket = (url: string) => readable<number | WebSocket>(0, function start(set) {
+    let ws = new WebSocket(url),
+        backOff = exponential(250, 30000);
 
-export class ReSocket {
-    private ws: WebSocket;
-    private backOff: IterableIterator<number>;
+    const open = () => {
+        backOff = exponential(250, 30000);
+        set(ws);
 
-    constructor(
-        private url: string,
-        private onState: (state: ReSocketState) => void
-    ) {
-        this.backOff = exponential(250, 30000);
+        debug('websocket connected');
     }
 
-    private connect = () => {
-        if (
-            this.ws &&
-            (this.ws.readyState === this.ws.OPEN ||
-                this.ws.readyState === this.ws.CONNECTING)
-        ) {
-            return;
-        }
-
-        this.ws = new WebSocket(this.url);
-        this.ws.onopen = this.onopen;
-        this.ws.onerror = this.onerror;
-    };
-
-    private onopen = () => {
-        this.backOff = exponential(250, 30000);
-
-        this.onState({ tag: "connected" });
-
-        debug(`websocket connected ${this.url}`);
-    };
-
-    private onerror = () => {
-        this.ws.close();
-
-        const delay = this.backOff.next().value;
-
-        this.onState({ tag: "connecting", delay });
+    const close = () => {
+        const delay = backOff.next().value as number;
+        set(delay);
         debug(`websocket reconnect in ${delay}ms`);
+        setTimeout(() => {
+            if (ws && ws?.readyState === ws?.OPEN) {
+                // We are already open, do nothing
+                // This might happen if the browser repairs the connection for us
+                backOff = exponential(250, 30000);
+                return;
+            }
 
-        setTimeout(() => this.connect(), delay);
+            ws.onopen = null;
+            ws.onclose = null;
+
+            ws = new WebSocket(url);
+            ws.onopen = open;
+            ws.onclose = close;
+        }, delay);
+    }
+    
+    ws.onopen = open;
+    ws.onclose = close;
+
+    return () => {
+        // CLOSE, ARE YA KIDDING ME!?
     };
-
-    open = () => {
-        this.connect();
-
-        this.onState({ tag: "connecting", delay: 0 });
-    };
-
-    close = () => {
-        this.ws.close();
-
-        debug(`websocket closed ${this.url}`);
-
-        this.onState({ tag: "closed" });
-    };
-}
+});

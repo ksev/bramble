@@ -28,4 +28,11 @@
         background-color: var(--container);
         color: var(--strong);
     }
+
+    menubar > :global(*:disabled) {
+        background-color: var(--container);
+
+        cursor: default;
+        color: var(--background);
+    }
 </style>

@@ -10,14 +10,14 @@
 
   import Colors from '$data/colors';
 
-  import { pipe } from './net/pipe';
-  
+  import { socket } from './net/pipe';
+
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
 </script>
 
 <main style={cssColorVariables}>
-  {#if $pipe.tag === "connecting" && $pipe.delay > 250}
+  {#if typeof $socket === 'number' && $socket > 250}
   <div class="error">
     ERROR: Could not connect to Rome service
   </div>

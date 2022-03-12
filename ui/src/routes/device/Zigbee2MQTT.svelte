@@ -3,21 +3,31 @@
 
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
-    import { pipe } from '../../net/pipe';
+    import type { Readable } from 'svelte/store';
+    import { configService } from '$net/pipe';
+    import type { ConfigResult } from '$net/protocol';
 
-    const chan1 = pipe.channel();
-    const chan2= pipe.channel();
+    let url: string;
+    let password: string;
+    let username: string;
 
-   function changeSettings(){
+    let configResult: Readable<ConfigResult>;
 
-   }
+    function changeSettings(){
+        configResult = $configService.zigbee2MQTT({
+            url,
+            username,
+            password
+        });
+    }
+
+    $: console.log($configResult);
 </script>
 
 <h1>Zigbee2MQTT</h1>
 
 <p>
-    { $chan1 } { $chan2 }
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque pulvinar elit sed quam ultrices mattis. Sed at convallis quam. In. 
+    Lorem ipsum dolor sit, consectetur adipiscing elit. Pellentesque pulvinar elit sed quam ultrices mattis. Sed at convallis quam. In. 
 </p>
 
 <Section color={Colors.sink}>
@@ -35,23 +45,23 @@
         <section class="form">
             <div class="form-group">
                 <label for="input">MQTT server address</label>
-                <input id="input" />
+                <input id="input" bind:value={url} />
             </div>
         
             <div class="form-group">
                 <label for="input">Username</label>
-                <input id="input" />
+                <input id="input" bind:value={username} />
             </div>
         
             <div class="form-group">
                 <label for="input">Password</label>
-                <input id="input" />
+                <input id="input" bind:value={password} />
             </div>
         </section>
         
         <section class="menu">
             <SubMenu>
-                <button on:click={() => changeSettings()}>
+                <button on:click={changeSettings} disabled={!$configService}>
                     Connect
                 </button>
             </SubMenu>

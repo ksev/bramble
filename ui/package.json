@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "proto:generate": "protoc --ts_out src/net/ -I ../ ../protocol.proto --ts_opt client_none"
   },
   "devDependencies": {
+    "@protobuf-ts/plugin": "^2.2.2",
     "@sveltejs/vite-plugin-svelte": "^1.0.0-next.38",
     "@tsconfig/svelte": "^3.0.0",
     "@types/color": "^3.0.3",
@@ -21,7 +23,6 @@
     "vite": "^2.8.0"
   },
   "dependencies": {
-    "@protobuf-ts/plugin": "^2.2.2",
     "color": "^3.0.3",
     "svelte-spa-router": "^3.0.4"
   }

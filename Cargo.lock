@@ -805,11 +805,14 @@ dependencies = [
 name = "rome"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "async-trait",
  "axum",
  "bytes",
  "mqtt-protocol",
  "prost",
  "prost-build",
+ "rand",
  "tokio",
  "tower-http",
  "tracing",

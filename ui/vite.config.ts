@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       $lib: resolve('./src/lib'),
       $data: resolve('./src/data'),
+      $net: resolve('./src/net'),
     }
   },
   plugins: [svelte()]

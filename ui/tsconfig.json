@@ -4,7 +4,8 @@
     "types": ["svelte"],
     "paths": {
       "$lib/*": ["src/lib/*"],
-      "$data/*": ["src/data/*"]
+      "$data/*": ["src/data/*"],
+      "$net/*": ["src/net/*"]
     },
     "target": "esnext",
     "useDefineForClassFields": true,
