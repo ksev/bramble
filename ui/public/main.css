@@ -12,6 +12,8 @@ html, body, #app {
     font-family: 'Roboto', sans-serif;
     font-size: 14px;
     color: #cfd2dd;
+
+    overscroll-behavior: none;
 }
 
 ol, ul {

@@ -1,7 +1,7 @@
 import { derived, readable, writable, type Readable, type Writable } from "svelte/store";
 import { resocket } from "./resocket";
 
-import { ConfigServiceClient, Sensor, type RpcTransport } from './protocol';
+//import { ConfigServiceClient, Sensor, type RpcTransport } from './protocol';
 import { debug, error } from "$data/log";
 
 class ChannelIdGenerator {
@@ -49,7 +49,7 @@ enum PipeAction {
     Part = 0x3,
     Close = 0x4,
 }
-
+/*
 class SocketTransport implements RpcTransport {
     private channelCallbacks = new Map<number, ChannelCallback>();
     private idGen = new ChannelIdGenerator();
@@ -165,7 +165,7 @@ class SocketTransport implements RpcTransport {
     }
 }
 
-export const socket = resocket(`ws://${document.domain}:8080/pipe`);
+
 
 export const configService: SvelteStore<null | ConfigServiceClient>  = derived(socket, (sock, set) => {
     if (typeof sock === 'number') {
@@ -181,4 +181,6 @@ export const configService: SvelteStore<null | ConfigServiceClient>  = derived(s
     }
 })
 
+*/
 
+export const socket = resocket(`ws://${document.domain}:8080/pipe`);

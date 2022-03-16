@@ -10,18 +10,19 @@
 
   import Colors from '$data/colors';
 
-  import { socket } from './net/pipe';
-
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
 </script>
 
 <main style={cssColorVariables}>
+  <!--
+
   {#if typeof $socket === 'number' && $socket > 250}
   <div class="error">
     ERROR: Could not connect to Rome service
   </div>
   {/if}
+  -->
   <div class="main2">
     <menubar>    
       <div>
@@ -86,6 +87,7 @@
     box-sizing: border-box;
     width: 100%;
     padding: 24px;
+    margin: 0;
   }
 
   menubar {

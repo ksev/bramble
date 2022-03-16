@@ -8,6 +8,21 @@ export function* monotonic() {
 }
 
 /**
+ * Spit out random number between 0->1 for eternity
+ */
+export function* random() {
+    for (;;) {
+        yield Math.random();
+    }
+}
+
+export function* randomCharacters() {
+    for (let r of random()) {
+        yield Math.random().toString(36).replace('0.', '');  
+    }
+}
+
+/**
  * Gives an exponentially larger number every iteration to the max
  * @param start The starting number and base number for exponential growth
  * @param max The max number allowed, defaults to MAX_SAFE_INTEGER

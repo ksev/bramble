@@ -4,24 +4,26 @@
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
     import type { Readable } from 'svelte/store';
-    import { configService } from '$net/pipe';
-    import type { ConfigResult } from '$net/protocol';
+    //import { configService } from '$net/pipe';
+    // import type { ConfigResult } from '$net/protocol';
 
     let url: string;
     let password: string;
     let username: string;
 
-    let configResult: Readable<ConfigResult>;
+    //let configResult: Readable<ConfigResult>;
 
     function changeSettings(){
+        /*
         configResult = $configService.zigbee2MQTT({
             url,
             username,
             password
         });
+        */
     }
 
-    $: console.log($configResult);
+    //$: console.log($configResult);
 </script>
 
 <h1>Zigbee2MQTT</h1>
@@ -61,7 +63,7 @@
         
         <section class="menu">
             <SubMenu>
-                <button on:click={changeSettings} disabled={!$configService}>
+                <button on:click={changeSettings} disabled={/*!$configService*/true}>
                     Connect
                 </button>
             </SubMenu>
