@@ -75,7 +75,7 @@ export function* flatMap<T, O>(it: Iterable<T>, callback: (data: T, index?: numb
  * @param it Iterator
  * @param n The number of values to read
  */
-export function* take<T>(it: IterableIterator<T>, n: number) {
+export function* take<T>(it: Iterator<T>, n: number) {
     for (let i = 0; i < n; i++) {
         const r = it.next();
 
@@ -93,7 +93,7 @@ export function* take<T>(it: IterableIterator<T>, n: number) {
  * @param it Iterator
  * @returns The value or undefined if the Iterator was empty
  */
-export function pop<T>(it: IterableIterator<T>): T | undefined {
+export function pop<T>(it: Iterator<T>): T | undefined {
     const n = it.next();
 
     if (n.done === true) {

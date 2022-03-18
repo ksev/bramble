@@ -16,7 +16,6 @@
 
 <main style={cssColorVariables}>
   <!--
-
   {#if typeof $socket === 'number' && $socket > 250}
   <div class="error">
     ERROR: Could not connect to Rome service

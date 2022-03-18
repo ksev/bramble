@@ -1,72 +1,84 @@
-<script lang="ts">    
-    export let label: string;
-    export let x: number;
-    export let y: number;
+<script lang="ts">
+    import type Color from "color";
+    import { automateContext, NodeData, NodeColors } from './automate';
 
-    let width = 200;
-    let height = 130;
+    import Output from './Output.svelte';
+    import Input from './Input.svelte';
+    import { get } from "svelte/store";
+import colors from "$data/colors";
 
+    export let data: NodeData;
+
+    const { zoom, layout, blockPan } = automateContext();
+    const nodeLayout = layout.get(data.id);
+    const singleIO = data.inputs.length === 0 || data.outputs.length === 0;
+    
     let grabbing = false;
+    let height = 0;
+
+    let x = get(nodeLayout).x;
+    let y = get(nodeLayout).y;
 
     function mouseDown() {
         grabbing = true;
+        blockPan.set(true);
     }
 
     function mouseUp() {
         grabbing = false;
+        blockPan.set(false);
     }
 
     function mouseMove(e: MouseEvent){
         if (!grabbing) return;
-
-        x = Math.ceil((x + e.movementX) / 20) * 20
-        y = Math.ceil((y + e.movementY) / 20) * 20
+        
+        x += e.movementX / $zoom;
+        y += e.movementY / $zoom;
     }
+
+    $: nodeLayout.resize(200, height); 
+    $: nodeLayout.move(x, y);
 </script>
 
-<div class="node" 
-     bind:clientWidth={width} 
-     bind:clientHeight={height} 
-     style="top: {y}px; left: {x}px">
-    <h3 on:mousedown={mouseDown} 
-        on:mouseup={mouseUp} 
-        on:mousemove={mouseMove} 
-        class:grabbing>{label}</h3>
-    <div class="node-body">
-        <div class="output">
-            °C
-            <div class="icon numberic"></div>
-        </div>
-        <div class="output">
-            °F
-            <div class="icon numberic"></div>
-        </div>
+<svelte:window on:mousemove|passive={mouseMove} on:mouseup={mouseUp} />
 
-        <div class="input">
-            <div class="icon numberic"></div>            
-            Offset        
-            <div class="input-cont">
-                <input />
-            </div>  
-        </div>
+<div class="node" 
+     bind:clientHeight|once={height} 
+     style="left: {$nodeLayout.x}px; top: {$nodeLayout.y}px; height: {$nodeLayout.height || 'auto'}; width: {$nodeLayout.width || 200}px;">
+    <h3 on:mousedown={mouseDown} 
+        style="background-color: {NodeColors[data.type].toString()}"
+        class:grabbing>{data.label}</h3>
+    <div class="node-body" style="background-color: {colors.background.alpha(0.9)}" class:singleIO>           
+        {#each data.outputs as output (output.id)}
+            <Output nodeId={data.id} data={output} />
+        {/each}
+
+        {#if data.settings}
+            <div class="settings">
+                <svelte:component this={data.settings} />
+            </div>
+        {/if}
+
+        {#each data.inputs as input (input.id)}
+            <Input nodeId={data.id} data={input} />
+        {/each}
     </div>
 </div>
 
-
 <style>
     .node {
-        position: absolute;
-        width: 200px;        
+        position: absolute;      
         filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.7));
+        display: flex;
+        flex-direction: column;
     }
 
     h3 {
         border-radius: 4px 4px 0 0;
         cursor: grab;
-        background-color: var(--sink);
         color: var(--strong);        
         padding: 8px;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: normal;
         cursor: grab;
         filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.2));
@@ -77,64 +89,20 @@
     }
 
     .node-body {
-        background-color: var(--background);
+        opacity: 0.9;
         display: flex;
         padding: 8px 0;
         gap: 8px;
         flex-direction: column;
-
         border-radius: 0 0 4px 4px;
+        flex-grow: 1;
     }  
 
-    .output {
-        height: 20px;
-        display: flex;
-        justify-content: right;
-        align-items: center;
-        gap: 8px;
-
-        margin-right: -5px;
+    .node-body.singleIO {
+        justify-content: center;
     }
 
-    .input {
-        height: 20px;
-        display: flex;
-        justify-content: left;
-        align-items: center;
-        gap: 8px;
-
-        margin-left: -5px;
-    }
-
-    .input .input-cont {
-        padding-right: 8px;
-        flex-shrink: 1;
-    }
-
-    .input input {
-        border: none;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        background-color: var(--container);
-        border-radius: 4px;
-        font-size: 12px;
-    }
-
-    .icon {
-        background-color: var(--device);
-        width: 12px;
-        height: 12px;
-        min-width: 12px;
-        min-height: 12px;
-        border: 1px solid #000;
-    }
-
-    .icon:hover {
-        filter:saturate(5);
-    }
-
-    .icon.numberic {
-        border-radius: 6px;
-    }
+    .settings {
+        flex-grow: 1;
+    }   
 </style>
