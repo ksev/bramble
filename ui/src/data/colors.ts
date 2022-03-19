@@ -11,6 +11,7 @@ export default {
     sink: Color("#ff6c6d"),
     sourcesink: Color("#b46cff"),
     transparent: Color('rgba(0,0,0,0)'),
+    error: Color("rgb(244, 98, 98)"),
 }
 
 export { Color };

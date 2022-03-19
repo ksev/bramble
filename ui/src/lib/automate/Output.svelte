@@ -1,16 +1,19 @@
 <script lang="ts">
+import { Point } from "$data/geometry";
+
     import { automateContext, Output } from "./automate";
 
     export let nodeId: number;
     export let data: Output;
 
-    const { layout, anchors, blockPan } = automateContext();
-    const nodeLayout = layout.get(nodeId);
+    const { layout, anchors, blockPan, edges } = automateContext();
+    const rect = layout.get(nodeId);
 
     let anchor: HTMLDivElement;
 
-    function mouseDown(e: MouseEvent) {
+    function mouseDown() {
         blockPan.set(true);
+        edges.update(l => [...l, { from: [nodeId, data.id], to: "mouse", type: data.type }])
     }
 
     function mouseUp() {
@@ -19,8 +22,12 @@
 
     $: if (anchor) {
         const key: [number, string] = [nodeId, data.id];
-        // The +6 is half the width of the icon, the +1 is half width of the icon - the negative margin
-        anchors(key).set([$nodeLayout.x + anchor.offsetLeft + 1, $nodeLayout.y + anchor.offsetTop + 6]);
+        anchors(key).set(
+            new Point(
+                $rect.origin.x + anchor.offsetLeft + 6,
+                $rect.origin.y + anchor.offsetTop + 6
+            )
+        );
     }
 </script>
 
@@ -28,7 +35,7 @@
 
 <div class="output">
     {data.label}
-    <div class="icon connected numeric" bind:this={anchor} on:mousedown={mouseDown}></div>
+    <div class="icon numeric" bind:this={anchor} on:mousedown={mouseDown}></div>
 </div>
 
 <style>
@@ -39,7 +46,7 @@
         align-items: center;
         gap: 8px;
 
-        margin-right: -5px;
+        margin-right: -6px;
     }
 
     .icon {

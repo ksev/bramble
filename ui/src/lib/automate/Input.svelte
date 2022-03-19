@@ -1,23 +1,29 @@
 <script lang="ts">
+import { Point } from "$data/geometry";
+
     import { automateContext, Input } from "./automate";
 
     export let nodeId: number;
     export let data: Input;
 
     const { layout, anchors, blockPan } = automateContext();
-    const nodeLayout = layout.get(nodeId);
+    const rect = layout.get(nodeId);
 
     let anchor: HTMLDivElement;
 
     $: if (anchor) {
         const key: [number, string] = [nodeId, data.id];
-        // The +6 is half the width of the icon, the +1 is half width of the icon - the negative margin
-        anchors(key).set([$nodeLayout.x + anchor.offsetLeft + 1, $nodeLayout.y + anchor.offsetTop + 6]);
+        anchors(key).set(
+            new Point(
+                $rect.origin.x + anchor.offsetLeft + 6,
+                $rect.origin.y + anchor.offsetTop + 6
+            )
+        );
     }
 </script>
 
 <div class="input">
-    <div class="icon connected numeric" bind:this={anchor}></div>            
+    <div class="icon numeric" bind:this={anchor}></div>            
     {data.label}        
     <!--
     <div class="input-cont">
@@ -53,7 +59,7 @@
         align-items: center;
         gap: 8px;
 
-        margin-left: -5px;
+        margin-left: -6px;
     }
 
     /*

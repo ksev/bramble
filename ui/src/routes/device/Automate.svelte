@@ -1,11 +1,13 @@
 <script lang="ts">
     import Node from '$lib/automate/Node.svelte';
-    import { key, NodeType, type Context, type NodeData, layoutStore, LayoutStore } from '$lib/automate/automate';
+    import Edge from '$lib/automate/Edge.svelte';
+
+    import { key, NodeType, type Context, type NodeData, layoutStore, LayoutStore, EdgeData } from '$lib/automate/automate';
 
     import { setContext } from 'svelte';
     import { Writable, writable } from 'svelte/store';
     import Colors from '$data/colors';
-import { catmull, pop } from '$data/iterators';
+import { Extent, Point, Rect } from '$data/geometry';
 
     const nodes: NodeData[] = [
         {
@@ -42,36 +44,52 @@ import { catmull, pop } from '$data/iterators';
     for (const node of nodes) {
         const estHeight = 60 + (node.outputs.length + node.inputs.length) * 20;
 
-        layout.set(node.id, layoutStore({
-            x: (6000 + 220 * i++) - 100,
-            y: 6000 - estHeight / 2,
-            width: 0,
-            height: 0,
-        }));
+        layout.set(node.id, layoutStore(new Rect(
+            new Point((6000 + 220 * i++) - 100, 6000 - estHeight / 2),
+            new Extent(0, 0),
+        )));         
     }
 
     const zoom = writable(1.0);
     const blockPan = writable(false);
+    const edges = writable<EdgeData[]>([]);
+    const pointer = writable<Point>(Point.ZERO);
 
     const map = new Map();
-    const anchors = ([n, id]: [number, string]) => {
-        let w: Writable<[number, number]>;
-        const key = `${n}-${id}`
+    const anchors = (key: [number, string] | "mouse"): Writable<Point> => {
+        let w: Writable<Point>;
 
-        if (!map.has(key)) {
-            console.log('new');
-            w = writable([0, 0]);
-            map.set(key, w);
+        let rkey: string;
+
+        if (typeof key === 'string') {
+            rkey = key;
+        } else {       
+            const [n, id] = key;
+            rkey = `${n}-${id}`;
+        }
+        
+        if (!map.has(rkey)) {
+            w = writable(Point.ZERO);            
+            map.set(rkey, w);
         } else {
-            w = map.get(key);
+            w = map.get(rkey);
         }
 
         return w;
     };
 
-    setContext<Context>(key, { zoom, blockPan, layout, anchors });
+    setContext<Context>(key, { 
+        zoom, 
+        blockPan, 
+        pointer,
+
+        layout, 
+        anchors, 
+        edges,
+    });
 
     const axisSize = 6000;
+    let editor: HTMLDivElement;
 
     let x = 0;
     let y = 0;
@@ -111,37 +129,21 @@ import { catmull, pop } from '$data/iterators';
     }
 
     function mouseMove(e: MouseEvent) {
-        if (!grabbed) return;   
+        const box = editor.getBoundingClientRect();
+
+        // Make the current mouse editor local mouse position availiable to all children
+        pointer.set(
+            new Point(
+                (e.clientX - box.x) - (width / 2 + panX) + 6000, 
+                (e.clientY - box.y) - (height / 2 + panY) + 6000
+            )
+        );
+
+        if (!grabbed) return;  
+
         x += e.movementX;
         y += e.movementY;
     } 
-
-    const f = anchors([0, 'temperature']);
-    const l = anchors([1, 'open']);
-
-    let d = "";
-
-    $: {
-        const [sx, sy] = $f;
-        const [ex, ey] = $l;
-
-        if (sy === ey || Math.abs(sx - ex) < 20) {
-            d = `M${sx},${sy} L${ex},${ey}`;
-        } else {
-            let yoffset = sy > ey ? 10 : -10;
-            let xoffset = sx > ex ? 10 : -10;
-            let mx = sx - (sx - ex) / 2;
-
-            d = `
-                M${sx},${sy} 
-                L${mx+xoffset},${sy} 
-                Q${mx},${sy},${mx},${sy-yoffset} 
-                L${mx},${ey+yoffset} 
-                Q${mx},${ey},${mx-xoffset},${ey} 
-                L${ex},${ey}
-            `;
-        }
-    }
 
     $: {
         let realAxisSize = axisSize * $zoom;
@@ -163,14 +165,15 @@ import { catmull, pop } from '$data/iterators';
 <svelte:window 
     on:keydown={keyDown} 
     on:keyup={keyUp} 
-    on:mousemove|passive={mouseMove} />
+    on:mousemove={mouseMove} />
 
 <div class="node-editor" 
      bind:clientWidth={width}
      bind:clientHeight={height}
+     bind:this={editor}
      on:mousedown={mouseDown}
      on:mouseup={mouseUp}
-     on:wheel|passive={wheel}
+     on:wheel|passive={wheel}     
      class:grabbed
      class:grabenabled={spaceDown}>
      <div class="grid" style="transform: translate({panX}px, {panY}px) translate(calc(-50% + {width/2}px), calc(-50% + {height/2}px)) scale({$zoom});">
@@ -179,13 +182,19 @@ import { catmull, pop } from '$data/iterators';
         {/each}
 
         <svg viewBox="0 0 12000 12000" class="edges">
-            <g stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="transparent" style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">
-                <path d={d} stroke={Colors.device.toString()} />
-            </g>
-
             <g>
                 <rect x="5993" y="5993" width="14" height="14" rx="2" fill="rgba(0,0,0,0.18)" />
             </g>
+
+            <g stroke-width="6" 
+               stroke-linecap="round" 
+               stroke-linejoin="round" 
+               fill="transparent" 
+               style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">                
+               {#each $edges as edge}
+                    <Edge from={edge.from} to={edge.to} color={Colors.device} />
+               {/each}
+            </g>            
         </svg>
      </div>    
 </div>
@@ -230,13 +239,6 @@ import { catmull, pop } from '$data/iterators';
     .node-editor.grabbed {
         cursor: grabbing !important;
     }  
-
-    .center {
-        width: 12px;
-        height: 12px;
-        background-color: rgba(0,0,0,0.18);
-        border-radius: 1px;
-    }
 
     .edges {
         width: 12000px;

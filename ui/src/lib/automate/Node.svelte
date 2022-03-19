@@ -1,23 +1,22 @@
 <script lang="ts">
-    import type Color from "color";
     import { automateContext, NodeData, NodeColors } from './automate';
 
     import Output from './Output.svelte';
     import Input from './Input.svelte';
     import { get } from "svelte/store";
-import colors from "$data/colors";
+    import colors from "$data/colors";
 
     export let data: NodeData;
 
     const { zoom, layout, blockPan } = automateContext();
-    const nodeLayout = layout.get(data.id);
+    const rect = layout.get(data.id);
     const singleIO = data.inputs.length === 0 || data.outputs.length === 0;
     
     let grabbing = false;
     let height = 0;
 
-    let x = get(nodeLayout).x;
-    let y = get(nodeLayout).y;
+    let x = get(rect).origin.x;
+    let y = get(rect).origin.y;
 
     function mouseDown() {
         grabbing = true;
@@ -36,17 +35,18 @@ import colors from "$data/colors";
         y += e.movementY / $zoom;
     }
 
-    $: nodeLayout.resize(200, height); 
-    $: nodeLayout.move(x, y);
+    $: rect.resize(200, height); 
+    $: rect.move(x, y);
 </script>
 
 <svelte:window on:mousemove|passive={mouseMove} on:mouseup={mouseUp} />
 
 <div class="node" 
      bind:clientHeight|once={height} 
-     style="left: {$nodeLayout.x}px; top: {$nodeLayout.y}px; height: {$nodeLayout.height || 'auto'}; width: {$nodeLayout.width || 200}px;">
+     style="left: {$rect.origin.x}px; top: {$rect.origin.y}px; height: {$rect.size.height || 'auto'}; width: {$rect.size.width || 200}px;">
     <h3 on:mousedown={mouseDown} 
         style="background-color: {NodeColors[data.type].toString()}"
+        draggable
         class:grabbing>{data.label}</h3>
     <div class="node-body" style="background-color: {colors.background.alpha(0.9)}" class:singleIO>           
         {#each data.outputs as output (output.id)}

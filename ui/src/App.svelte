@@ -72,7 +72,7 @@
     font-weight: bold;
     font-size: 16px;
 
-    background-color: rgb(244, 98, 98);
+    background-color: var(--error);
     border-bottom: 1px solid #f98383;
     text-shadow: 2px 2px rgba(255,255,255,0.25);
   }
