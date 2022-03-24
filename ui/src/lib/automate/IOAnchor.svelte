@@ -89,7 +89,8 @@
     on:mouseenter={mouseEnter}
     on:mouseleave={mouseLeave}
     on:mousedown={mouseDown}
-    on:mouseup={mouseUp}></div>
+    on:mouseup={mouseUp}>
+</div>
 
 <style>
     .icon {
@@ -99,9 +100,14 @@
         min-width: 12px;
         min-height: 12px;
 
-        transition: 200ms linear filter;        
+        border: 3px solid var(--device); 
+
+        transition: 100ms linear box-shadow, 300ms linear filter;        
     }
 
+    .icon:hover:not(.disabled) {
+        box-shadow: 0 0 4px rgba(0,0,0,0.35) inset;
+    }
 
     .icon.numeric {
         border-radius: 6px;

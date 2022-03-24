@@ -136,8 +136,8 @@ import HalfEdge from '$lib/automate/HalfEdge.svelte';
         // Make the current mouse editor local mouse position availiable to all children
         pointer.set(
             new Point(
-                (e.clientX - box.x) - (width / 2 + panX) + 6000, 
-                (e.clientY - box.y) - (height / 2 + panY) + 6000
+                ((e.clientX - box.x) - (width / 2 + panX)) / $zoom + axisSize,
+                ((e.clientY - box.y) - (height / 2 + panY)) / $zoom + axisSize,
             )
         );
 
