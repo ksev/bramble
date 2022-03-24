@@ -1,30 +1,16 @@
 <script lang="ts">
-import { Point } from "$data/geometry";
-
-    import { automateContext, Input } from "./automate";
+    import { Input, IOId } from "./automate";
+    import IOAnchor from "./IOAnchor.svelte";
 
     export let nodeId: number;
     export let data: Input;
 
-    const { layout, anchors, blockPan } = automateContext();
-    const rect = layout.get(nodeId);
-
-    let anchor: HTMLDivElement;
-
-    $: if (anchor) {
-        const key: [number, string] = [nodeId, data.id];
-        anchors(key).set(
-            new Point(
-                $rect.origin.x + anchor.offsetLeft + 6,
-                $rect.origin.y + anchor.offsetTop + 6
-            )
-        );
-    }
+    const ioid = new IOId(nodeId, data.id);
 </script>
 
 <div class="input">
-    <div class="icon numeric" bind:this={anchor}></div>            
-    {data.label}        
+    <IOAnchor id={ioid} type={data.type} direction={"input"} />
+    {data.label}
     <!--
     <div class="input-cont">
         <input />
@@ -32,27 +18,8 @@ import { Point } from "$data/geometry";
     -->
 </div>
 
-<style>
-    .icon {
-        background-color: var(--device);
-        width: 12px;
-        height: 12px;
-        min-width: 12px;
-        min-height: 12px;
-
-        border: 3px solid var(--device);
-        transition: 200ms linear box-shadow;
-    }
-
-    .icon.numeric {
-        border-radius: 6px;
-    }
-
-    .icon:hover, .icon.connected {
-        box-shadow: 0 0 4px rgba(0,0,0,0.35) inset;
-    }
-
-    .input {        
+<style>   
+    .input {
         height: 20px;
         display: flex;
         justify-content: left;

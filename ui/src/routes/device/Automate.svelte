@@ -2,12 +2,13 @@
     import Node from '$lib/automate/Node.svelte';
     import Edge from '$lib/automate/Edge.svelte';
 
-    import { key, NodeType, type Context, type NodeData, layoutStore, LayoutStore, EdgeData } from '$lib/automate/automate';
+    import { key, NodeType, type Context, type NodeData, layoutStore, LayoutStore, EdgeData, HalfEdgeData, IOId } from '$lib/automate/automate';
 
     import { setContext } from 'svelte';
     import { Writable, writable } from 'svelte/store';
     import Colors from '$data/colors';
 import { Extent, Point, Rect } from '$data/geometry';
+import HalfEdge from '$lib/automate/HalfEdge.svelte';
 
     const nodes: NodeData[] = [
         {
@@ -17,9 +18,14 @@ import { Extent, Point, Rect } from '$data/geometry';
             inputs: [],
             outputs: [
                 {
-                    id: 'temperature',
+                    id: 'temperature_c',
                     label: 'temperature °C',
-                    type: { type:"numeric" },
+                    type: { kind:"numeric" },
+                },
+                {
+                    id: 'temperature_f',
+                    label: 'temperature °F',
+                    type: { kind:"numeric" },
                 }
             ],
         },
@@ -31,7 +37,7 @@ import { Extent, Point, Rect } from '$data/geometry';
                 {
                     id: 'open',
                     label: 'open %',
-                    type: { type:"numeric" },
+                    type: { kind:"numeric" },
                 }
             ],
             outputs: [],
@@ -54,25 +60,18 @@ import { Extent, Point, Rect } from '$data/geometry';
     const blockPan = writable(false);
     const edges = writable<EdgeData[]>([]);
     const pointer = writable<Point>(Point.ZERO);
+    const halfEdge = writable<HalfEdgeData>(null);
 
     const map = new Map();
-    const anchors = (key: [number, string] | "mouse"): Writable<Point> => {
+    const anchors = (key: IOId): Writable<Point> => {
         let w: Writable<Point>;
+        let strKey = key.toString();
 
-        let rkey: string;
-
-        if (typeof key === 'string') {
-            rkey = key;
-        } else {       
-            const [n, id] = key;
-            rkey = `${n}-${id}`;
-        }
-        
-        if (!map.has(rkey)) {
+        if (!map.has(strKey)) {
             w = writable(Point.ZERO);            
-            map.set(rkey, w);
+            map.set(strKey, w);
         } else {
-            w = map.get(rkey);
+            w = map.get(strKey);
         }
 
         return w;
@@ -86,6 +85,7 @@ import { Extent, Point, Rect } from '$data/geometry';
         layout, 
         anchors, 
         edges,
+        halfEdge,
     });
 
     const axisSize = 6000;
@@ -126,6 +126,8 @@ import { Extent, Point, Rect } from '$data/geometry';
 
     function mouseUp() {
         grabbed = false;
+        blockPan.set(false);
+        halfEdge.set(null);
     }
 
     function mouseMove(e: MouseEvent) {
@@ -173,7 +175,7 @@ import { Extent, Point, Rect } from '$data/geometry';
      bind:this={editor}
      on:mousedown={mouseDown}
      on:mouseup={mouseUp}
-     on:wheel|passive={wheel}     
+     on:wheel|passive={wheel}    
      class:grabbed
      class:grabenabled={spaceDown}>
      <div class="grid" style="transform: translate({panX}px, {panY}px) translate(calc(-50% + {width/2}px), calc(-50% + {height/2}px)) scale({$zoom});">
@@ -190,10 +192,15 @@ import { Extent, Point, Rect } from '$data/geometry';
                stroke-linecap="round" 
                stroke-linejoin="round" 
                fill="transparent" 
-               style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">                
+               style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">    
+               
                {#each $edges as edge}
-                    <Edge from={edge.from} to={edge.to} color={Colors.device} />
+                    <Edge from={edge.output} to={edge.input} color={Colors.device} />
                {/each}
+
+               {#if $halfEdge}
+                    <HalfEdge data={$halfEdge} />
+               {/if}
             </g>            
         </svg>
      </div>    

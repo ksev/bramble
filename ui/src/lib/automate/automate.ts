@@ -13,7 +13,8 @@ export interface Context {
 
     layout:  Map<number, LayoutStore>,
     edges: Writable<EdgeData[]>,
-    anchors: (key: [number, string] | "mouse") => Writable<Point>,
+    halfEdge: Writable<HalfEdgeData>,
+    anchors: (key: IOId) => Writable<Point>,
 }
 
 export function automateContext(): Context {
@@ -32,9 +33,9 @@ export interface Output {
     label: string,
 }
 
-export type IOType = { type: "boolean" }
-                   | { type: "numeric", min?: number, max?: number }
-                   | { type: "enum", values: string[] }
+export type IOType = { kind: "boolean" }
+                   | { kind: "numeric", min?: number, max?: number }
+                   | { kind: "enum", values: string[] }
 
 export enum NodeType {
     Source = 0,
@@ -60,10 +61,41 @@ export interface NodeData {
     settings?: SvelteComponent,
 }
 
+export class IOId {
+    constructor(public readonly nodeId: number, public readonly name: string) {}
+    toString = () => `${this.nodeId}-${this.name}`
+}
+
 export interface EdgeData {
-    from: [number, string] | "mouse",
-    to: [number, string] | "mouse",
+    output: IOId,
+    input: IOId,
     type: IOType,
+}
+
+export type HalfEdgeData = 
+    { output: IOId, type: IOType, over?: IOId } |
+    { input: IOId, type: IOType, over?: IOId };
+
+/**
+ * Fill in the missing IO for the half edge tuning it into a full "real" edge
+ * @param half The current half edge
+ * @param missing missing data
+ * @returns A full fledged edge
+ */
+export function completeEdge(half: HalfEdgeData, missing: IOId): EdgeData {
+    if ('output' in half) {
+        return {
+            output: half.output,
+            input: missing,
+            type: half.type
+        };
+    } else {
+        return {
+            input: half.input,
+            output: missing,
+            type: half.type
+        }
+    }
 }
 
 export type LayoutStore = ReturnType<typeof layoutStore>;
