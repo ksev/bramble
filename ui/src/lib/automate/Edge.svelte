@@ -17,7 +17,7 @@
         let distance = Math.abs($first.x - $last.x);               
         let offset = Math.max(
             60,
-            (distance / 2) + 40
+            (distance / 2) + 60
         );
 
         d = `M${$first.x},${$first.y}C${$first.x+offset},${$first.y},${$last.x-offset},${$last.y},${$last.x},${$last.y}`;
