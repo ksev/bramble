@@ -2,9 +2,14 @@ syntax = "proto3";
 
 package protocol;
 
+message Void {}
+
 message Sensor {
   int32 id = 1;
-  float value = 2;
+}
+
+message SensorValue {
+  float value = 1;
 }
 
 message Zigbee2MQTTConfig {
@@ -13,14 +18,18 @@ message Zigbee2MQTTConfig {
   string password = 3;
 }
 
-message ConfigResult {
-  oneof result_oneof {
-    bool success = 4;
-    string message = 5;
-  }
+message Zigbee2MQTTStats {
+  int32 sources = 1;
+  int32 sinks = 2;
+  int32 sourcesinks = 3;
+  int32 devices = 4;
 }
 
-service ConfigService {
-  rpc Zigbee2MQTT(Zigbee2MQTTConfig) returns (ConfigResult);
-  rpc Listen(Sensor) returns (stream Sensor);
+service Zigbee2MQTTService {
+  rpc Config(Zigbee2MQTTConfig) returns (Zigbee2MQTTStats);
+  rpc Status(Void) returns (Zigbee2MQTTStats);
+}
+
+service StatisticsService {
+  rpc Listen(Sensor) returns (stream SensorValue);
 }

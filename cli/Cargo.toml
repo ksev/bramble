@@ -1,0 +1,16 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+prost-build = "0.9"
+serde = "1"
+serde_derive = "1"
+clap = { version = "3.1.8", features = ["derive"] }
+
+[dependencies.tera]
+version = "1.15"
+default-features = false

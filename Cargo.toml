@@ -1,22 +1,10 @@
-[package]
-name = "rome"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+members = [
+    "backend",
+    "cli",
+]
 
-[dependencies]
-tracing = "0.1"
-tokio = { version = "1.0", features = ["full"] }
-axum = { version = "0.4.6", features = ["ws", "headers"] }
-mqtt-protocol = { version = "0.11.2", features = ["tokio"] }
-tracing-subscriber = { version="0.3", features = ["env-filter"] }
-tower-http = { version = "0.2.0", features = ["fs", "trace"] }
-bytes = "1.1.0"
-prost = "0.9"
-anyhow = "1.0"
-async-trait = "0.1.52"
-rand = "0.8.5"
-
-[build-dependencies]
-prost-build = { version = "0.9" }
+default-members = [
+    "backend"
+]
