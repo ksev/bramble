@@ -1,10 +1,14 @@
 use std::collections::BTreeMap;
 
+use once_cell::sync::Lazy;
 use tokio::sync::mpsc::Sender;
 
 use super::pipe::PipeRequest;
 
 mod protocol;
+mod zigbee2mqtt;
+
+pub static ROUTER: Lazy<Router> = Lazy::new(Router::default);
 
 /// Trait every RPC service has to implement to be routable
 #[async_trait::async_trait]
@@ -46,29 +50,8 @@ impl Default for Router {
     fn default() -> Self {
         let mut router = Router::new();
         router.add_service(Box::new(protocol::Zigbee2MqttServiceRouter::<
-            Zigbee2MqttService,
+            zigbee2mqtt::Service,
         >::default()));
         router
-    }
-}
-
-#[derive(Default)]
-struct Zigbee2MqttService;
-
-#[async_trait::async_trait]
-impl protocol::Zigbee2MqttService for Zigbee2MqttService {
-    async fn config(
-        _input: protocol::Zigbee2MqttConfig,
-    ) -> anyhow::Result<protocol::Zigbee2MqttStats> {
-        Ok(protocol::Zigbee2MqttStats {
-            sources: 0,
-            sourcesinks: 1,
-            devices: 5,
-            sinks: 10,
-        })
-    }
-
-    async fn status(_input: protocol::Void) -> anyhow::Result<protocol::Zigbee2MqttStats> {
-        todo!()
     }
 }

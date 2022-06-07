@@ -1,3 +1,10 @@
+//! Pipe is a very simple abstraction to multiplex multiple channels of data over a Websocket connection.
+//! It simply prefixes 3 bytes to any binary Websocket message.
+//! One byte for the `PipeAction` and then a u16 in big endian for the id of the channel we are talking over.
+//! 
+//! Channel id 0 is reserved for global communication like errors.
+//! Clients can only send Request and Close PipeActions.
+
 use anyhow::{bail, Error};
 use bytes::BufMut;
 use std::iter::once;
@@ -85,6 +92,7 @@ impl TryFrom<Vec<u8>> for PipeMessage {
     }
 }
 
+/// Construct a Pipe error message for a specific channel
 pub fn error_message(channel: u16, message: &str) -> Vec<u8> {
     once(PipeAction::Error as u8)
         .chain(channel.to_be_bytes())

@@ -1,7 +1,7 @@
 mod pipe;
 mod rpc;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use axum::{
     extract::{
@@ -35,7 +35,7 @@ pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
         )
         // routes are matched from bottom to top, so we have to put `nest` at the
         // top since it matches all routes
-        .route("/pipe", get(|ws, user_agent| ws_handler(ws, user_agent)));
+        .route("/pipe", get(ws_handler));
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
@@ -75,6 +75,8 @@ async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
                 match msg {
                     Message::Binary(v) => {
                         if let Err(e) = handle_pipe_action(v, tx.clone()).await {
+                            error!("{e}");
+
                             let msg = error_message(0x0, &format!("{e}"));
                             tx.send(msg).await?;
                         }
@@ -100,17 +102,13 @@ async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
 }
 
 async fn handle_pipe_action(data: Vec<u8>, response: Sender<Vec<u8>>) -> anyhow::Result<()> {
-    let rpc = Arc::new(rpc::Router::default());
-
     match PipeMessage::try_from(data)? {
         PipeMessage::Request(ctx) => {
-            let rpc = rpc.clone();
-
             tokio::spawn(async move {
                 let resp = response.clone();
                 let channel_id = ctx.channel_id;
 
-                if let Err(e) = rpc.route(ctx, resp).await {
+                if let Err(e) = rpc::ROUTER.route(ctx, resp).await {
                     let msg = error_message(channel_id, &format!("{e}"));
                     response.send(msg).await.expect("Can send on channel");
                 }

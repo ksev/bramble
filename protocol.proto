@@ -4,32 +4,23 @@ package protocol;
 
 message Void {}
 
-message Sensor {
-  int32 id = 1;
-}
-
-message SensorValue {
-  float value = 1;
-}
-
 message Zigbee2MQTTConfig {
   string url = 1;
   string username = 2;
   string password = 3;
 }
 
-message Zigbee2MQTTStats {
-  int32 sources = 1;
-  int32 sinks = 2;
-  int32 sourcesinks = 3;
-  int32 devices = 4;
+message Zigbee2MQTTServer {
+  string host = 1;
+  uint32 port = 2;
+  uint32 devices = 3;
+}
+
+message Zigbee2MQTTServers {
+  repeated Zigbee2MQTTServer servers = 1; 
 }
 
 service Zigbee2MQTTService {
-  rpc Config(Zigbee2MQTTConfig) returns (Zigbee2MQTTStats);
-  rpc Status(Void) returns (Zigbee2MQTTStats);
-}
-
-service StatisticsService {
-  rpc Listen(Sensor) returns (stream SensorValue);
+  rpc Config(Zigbee2MQTTConfig) returns (Zigbee2MQTTServer);
+  rpc Status(Void) returns (Zigbee2MQTTServers);
 }

@@ -1,7 +1,7 @@
-import { derived, readable, writable, type Readable, type Writable } from "svelte/store";
+import { derived, readable, type Readable } from "svelte/store";
 import { resocket } from "./resocket";
 
-import { Zigbee2MqttServiceClient, Sensor, type RpcTransport } from './protocol';
+import { Zigbee2MqttServiceClient, type RpcTransport } from './protocol';
 import { debug, error } from "$data/log";
 
 class ChannelIdGenerator {

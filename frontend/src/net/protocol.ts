@@ -16,24 +16,6 @@ import { MessageType } from "@protobuf-ts/runtime";
 export interface Void {
 }
 /**
- * @generated from protobuf message protocol.Sensor
- */
-export interface Sensor {
-    /**
-     * @generated from protobuf field: int32 id = 1;
-     */
-    id: number;
-}
-/**
- * @generated from protobuf message protocol.SensorValue
- */
-export interface SensorValue {
-    /**
-     * @generated from protobuf field: float value = 1;
-     */
-    value: number;
-}
-/**
  * @generated from protobuf message protocol.Zigbee2MQTTConfig
  */
 export interface Zigbee2MQTTConfig {
@@ -51,25 +33,30 @@ export interface Zigbee2MQTTConfig {
     password: string;
 }
 /**
- * @generated from protobuf message protocol.Zigbee2MQTTStats
+ * @generated from protobuf message protocol.Zigbee2MQTTServer
  */
-export interface Zigbee2MQTTStats {
+export interface Zigbee2MQTTServer {
     /**
-     * @generated from protobuf field: int32 sources = 1;
+     * @generated from protobuf field: string host = 1;
      */
-    sources: number;
+    host: string;
     /**
-     * @generated from protobuf field: int32 sinks = 2;
+     * @generated from protobuf field: uint32 port = 2;
      */
-    sinks: number;
+    port: number;
     /**
-     * @generated from protobuf field: int32 sourcesinks = 3;
-     */
-    sourcesinks: number;
-    /**
-     * @generated from protobuf field: int32 devices = 4;
+     * @generated from protobuf field: uint32 devices = 3;
      */
     devices: number;
+}
+/**
+ * @generated from protobuf message protocol.Zigbee2MQTTServers
+ */
+export interface Zigbee2MQTTServers {
+    /**
+     * @generated from protobuf field: repeated protocol.Zigbee2MQTTServer servers = 1;
+     */
+    servers: Zigbee2MQTTServer[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Void$Type extends MessageType<Void> {
@@ -97,100 +84,6 @@ class Void$Type extends MessageType<Void> {
  * @generated MessageType for protobuf message protocol.Void
  */
 export const Void = new Void$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Sensor$Type extends MessageType<Sensor> {
-    constructor() {
-        super("protocol.Sensor", [
-            { no: 1, name: "id", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
-        ]);
-    }
-    create(value?: PartialMessage<Sensor>): Sensor {
-        const message = { id: 0 };
-        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
-        if (value !== undefined)
-            reflectionMergePartial<Sensor>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Sensor): Sensor {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* int32 id */ 1:
-                    message.id = reader.int32();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: Sensor, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* int32 id = 1; */
-        if (message.id !== 0)
-            writer.tag(1, WireType.Varint).int32(message.id);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message protocol.Sensor
- */
-export const Sensor = new Sensor$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SensorValue$Type extends MessageType<SensorValue> {
-    constructor() {
-        super("protocol.SensorValue", [
-            { no: 1, name: "value", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ }
-        ]);
-    }
-    create(value?: PartialMessage<SensorValue>): SensorValue {
-        const message = { value: 0 };
-        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
-        if (value !== undefined)
-            reflectionMergePartial<SensorValue>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SensorValue): SensorValue {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* float value */ 1:
-                    message.value = reader.float();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: SensorValue, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* float value = 1; */
-        if (message.value !== 0)
-            writer.tag(1, WireType.Bit32).float(message.value);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message protocol.SensorValue
- */
-export const SensorValue = new SensorValue$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Zigbee2MQTTConfig$Type extends MessageType<Zigbee2MQTTConfig> {
     constructor() {
@@ -253,38 +146,34 @@ class Zigbee2MQTTConfig$Type extends MessageType<Zigbee2MQTTConfig> {
  */
 export const Zigbee2MQTTConfig = new Zigbee2MQTTConfig$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Zigbee2MQTTStats$Type extends MessageType<Zigbee2MQTTStats> {
+class Zigbee2MQTTServer$Type extends MessageType<Zigbee2MQTTServer> {
     constructor() {
-        super("protocol.Zigbee2MQTTStats", [
-            { no: 1, name: "sources", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "sinks", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "sourcesinks", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 4, name: "devices", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        super("protocol.Zigbee2MQTTServer", [
+            { no: 1, name: "host", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "port", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 3, name: "devices", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
-    create(value?: PartialMessage<Zigbee2MQTTStats>): Zigbee2MQTTStats {
-        const message = { sources: 0, sinks: 0, sourcesinks: 0, devices: 0 };
+    create(value?: PartialMessage<Zigbee2MQTTServer>): Zigbee2MQTTServer {
+        const message = { host: "", port: 0, devices: 0 };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            reflectionMergePartial<Zigbee2MQTTStats>(this, message, value);
+            reflectionMergePartial<Zigbee2MQTTServer>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Zigbee2MQTTStats): Zigbee2MQTTStats {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Zigbee2MQTTServer): Zigbee2MQTTServer {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* int32 sources */ 1:
-                    message.sources = reader.int32();
+                case /* string host */ 1:
+                    message.host = reader.string();
                     break;
-                case /* int32 sinks */ 2:
-                    message.sinks = reader.int32();
+                case /* uint32 port */ 2:
+                    message.port = reader.uint32();
                     break;
-                case /* int32 sourcesinks */ 3:
-                    message.sourcesinks = reader.int32();
-                    break;
-                case /* int32 devices */ 4:
-                    message.devices = reader.int32();
+                case /* uint32 devices */ 3:
+                    message.devices = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -297,19 +186,16 @@ class Zigbee2MQTTStats$Type extends MessageType<Zigbee2MQTTStats> {
         }
         return message;
     }
-    internalBinaryWrite(message: Zigbee2MQTTStats, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* int32 sources = 1; */
-        if (message.sources !== 0)
-            writer.tag(1, WireType.Varint).int32(message.sources);
-        /* int32 sinks = 2; */
-        if (message.sinks !== 0)
-            writer.tag(2, WireType.Varint).int32(message.sinks);
-        /* int32 sourcesinks = 3; */
-        if (message.sourcesinks !== 0)
-            writer.tag(3, WireType.Varint).int32(message.sourcesinks);
-        /* int32 devices = 4; */
+    internalBinaryWrite(message: Zigbee2MQTTServer, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string host = 1; */
+        if (message.host !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.host);
+        /* uint32 port = 2; */
+        if (message.port !== 0)
+            writer.tag(2, WireType.Varint).uint32(message.port);
+        /* uint32 devices = 3; */
         if (message.devices !== 0)
-            writer.tag(4, WireType.Varint).int32(message.devices);
+            writer.tag(3, WireType.Varint).uint32(message.devices);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -317,21 +203,62 @@ class Zigbee2MQTTStats$Type extends MessageType<Zigbee2MQTTStats> {
     }
 }
 /**
- * @generated MessageType for protobuf message protocol.Zigbee2MQTTStats
+ * @generated MessageType for protobuf message protocol.Zigbee2MQTTServer
  */
-export const Zigbee2MQTTStats = new Zigbee2MQTTStats$Type();
+export const Zigbee2MQTTServer = new Zigbee2MQTTServer$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Zigbee2MQTTServers$Type extends MessageType<Zigbee2MQTTServers> {
+    constructor() {
+        super("protocol.Zigbee2MQTTServers", [
+            { no: 1, name: "servers", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Zigbee2MQTTServer }
+        ]);
+    }
+    create(value?: PartialMessage<Zigbee2MQTTServers>): Zigbee2MQTTServers {
+        const message = { servers: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<Zigbee2MQTTServers>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Zigbee2MQTTServers): Zigbee2MQTTServers {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated protocol.Zigbee2MQTTServer servers */ 1:
+                    message.servers.push(Zigbee2MQTTServer.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Zigbee2MQTTServers, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated protocol.Zigbee2MQTTServer servers = 1; */
+        for (let i = 0; i < message.servers.length; i++)
+            Zigbee2MQTTServer.internalBinaryWrite(message.servers[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message protocol.Zigbee2MQTTServers
+ */
+export const Zigbee2MQTTServers = new Zigbee2MQTTServers$Type();
 /**
  * @generated ServiceType for protobuf service protocol.Zigbee2MQTTService
  */
 export const Zigbee2MQTTService = new ServiceType("protocol.Zigbee2MQTTService", [
-    { name: "Config", options: {}, I: Zigbee2MQTTConfig, O: Zigbee2MQTTStats },
-    { name: "Status", options: {}, I: Void, O: Zigbee2MQTTStats }
-]);
-/**
- * @generated ServiceType for protobuf service protocol.StatisticsService
- */
-export const StatisticsService = new ServiceType("protocol.StatisticsService", [
-    { name: "Listen", serverStreaming: true, options: {}, I: Sensor, O: SensorValue }
+    { name: "Config", options: {}, I: Zigbee2MQTTConfig, O: Zigbee2MQTTServer },
+    { name: "Status", options: {}, I: Void, O: Zigbee2MQTTServers }
 ]);
 import { derived, type Readable } from "svelte/store";
 
@@ -345,41 +272,22 @@ export class Zigbee2MqttServiceClient {
 
     
         
-            config(input: Zigbee2MQTTConfig): Promise<Zigbee2MQTTStats> {
+            config(input: Zigbee2MQTTConfig): Promise<Zigbee2MQTTServer> {
                 return this.transport.unary(
                     0xd109,
                     0xd74e,
                     Zigbee2MQTTConfig.toBinary(input),
-                ).then(b => b ? Zigbee2MQTTStats.fromBinary(b) : null);
+                ).then(b => b ? Zigbee2MQTTServer.fromBinary(b) : null);
             }
         
     
         
-            status(input: Void): Promise<Zigbee2MQTTStats> {
+            status(input: Void): Promise<Zigbee2MQTTServers> {
                 return this.transport.unary(
                     0xd109,
                     0x9b83,
                     Void.toBinary(input),
-                ).then(b => b ? Zigbee2MQTTStats.fromBinary(b) : null);
-            }
-        
-    
-}
-// ========================== StatisticsService ==========================
-export class StatisticsServiceClient {
-    constructor(private transport: RpcTransport) {}
-
-    
-        
-            listen(input: Sensor): Readable<SensorValue> {
-                return derived( 
-                    this.transport.stream(
-                        0x5f00,
-                        0x47a5, 
-                        Sensor.toBinary(input)
-                    ), 
-                    b => b ? SensorValue.fromBinary(b) : null
-                );
+                ).then(b => b ? Zigbee2MQTTServers.fromBinary(b) : null);
             }
         
     

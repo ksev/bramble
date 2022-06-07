@@ -10,7 +10,7 @@
 
     import Colors, { Color } from '$data/colors';
 
-    const virtualGradient = `linear-gradient(180deg, ${Colors.source} 50%, ${Colors.sink} 90%)`;
+    const virtualGradient = `linear-gradient(180deg, ${Colors.feature} 50%, ${Colors.automation} 90%)`;
 </script>
 
 <div in:fade={{duration: 100}}>

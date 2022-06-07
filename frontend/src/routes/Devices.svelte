@@ -1,6 +1,7 @@
 <script lang="ts">
     import {fade} from 'svelte/transition'
 
+    import Ledger from '$lib/Ledger.svelte';
     import Icon from '$lib/Icon.svelte';
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
@@ -28,20 +29,20 @@
       
         <div class="grow"></div>
         
-        <div class="ledger">
+        <Ledger>
             <div>
-                <Icon name="activity" color={Colors.source} size={18} />
-                <span>Source</span>
+                <Icon name="microchip" color={Colors.device} size={18} />
+                <span>Device</span>
             </div>
             <div>
-                <Icon name="archive" color={Colors.sink} size={18} />
-                <span>Sink</span>
+                <Icon name="activity" color={Colors.feature} size={18} />
+                <span>Feature</span>
             </div>
             <div>
-                <Icon name="database" color={Colors.sourcesink} size={18} />
-                <span>SourceSink</span>
+                <Icon name="share-alt" color={Colors.automation} size={18} />
+                <span>Automation</span>
             </div>
-        </div>
+        </Ledger>
     </div>
 
     <Section color={Colors.device}>
@@ -67,23 +68,6 @@
 
     .grow {
         flex-grow: 1;
-    }
-
-    .ledger {
-        display: flex;
-        padding: 12px;
-        border-radius: 8px;
-
-        background-color: var(--container);
-        gap: 12px;
-    }
-
-    .ledger > div {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;    
-        font-size: 12px;    
     }
 
     .empty {

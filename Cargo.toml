@@ -6,5 +6,8 @@ members = [
 ]
 
 default-members = [
-    "backend"
+    "backend",
 ]
+
+[profile.release]
+lto = "thin"
