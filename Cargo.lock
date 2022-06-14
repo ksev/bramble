@@ -259,8 +259,8 @@ dependencies = [
  "bytes",
  "chrono",
  "dashmap",
+ "flume",
  "futures",
- "jsonpath-rust",
  "once_cell",
  "prost",
  "rand",
@@ -934,9 +934,9 @@ checksum = "279fb028e20b3c4c320317955b77c5e0c9701f05a1d309905d6fc702cdc5053e"
 
 [[package]]
 name = "flume"
-version = "0.10.12"
+version = "0.10.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "843c03199d0c0ca54bc1ea90ac0d507274c28abcc4f691ae8b4eaa375087c76a"
+checksum = "1ceeb589a3157cac0ab8cc585feb749bd2cea5cb55a6ee802ad72d9fd38303da"
 dependencies = [
  "futures-core",
  "futures-sink",
@@ -1391,18 +1391,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "671a26f820db17c2a2750743f1dd03bafd15b98c9f30c7c2628c024c05d73397"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "jsonpath-rust"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be0f4bae438d5938f87441f3683c731f0bb5667a8df0f27684589b1802c3458d"
-dependencies = [
- "pest",
- "pest_derive",
- "regex",
- "serde_json",
 ]
 
 [[package]]

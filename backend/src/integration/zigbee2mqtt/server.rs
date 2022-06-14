@@ -91,7 +91,7 @@ impl Server {
 
         Ok(Server {
             info: server_info,
-            devices: 10,
+            devices: 10, 
         })
 
         /*

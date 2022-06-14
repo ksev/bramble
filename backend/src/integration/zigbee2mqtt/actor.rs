@@ -20,14 +20,11 @@ impl Actor for Zigbee2Mqtt {
 }
 
 impl Zigbee2Mqtt {
-    pub fn start(server_info: MqttServerInfo) -> Result<Addr<Zigbee2Mqtt>> {
-        let mqtt = Mqtt::connect(server_info.clone());
+    pub async fn start(server_info: MqttServerInfo) -> Result<Addr<Zigbee2Mqtt>> {
+        let mqtt = Mqtt::connect(server_info.clone()).await?;
         let addr = Zigbee2Mqtt { server_info }.start();
 
-        let _ = mqtt.send(Subscribe(
-            "zigbee2mqtt/bridge/devices".into(),
-            addr.to_weak().into(),
-        ))?;
+        mqtt.subscribe("zigbee2mqtt/bridge/devices", addr.clone())?;
 
         Ok(addr)
     }
@@ -36,11 +33,15 @@ impl Zigbee2Mqtt {
         let zigbee_devices: Vec<Device> = serde_json::from_slice(&data)?;
 
         crate::device::Device::integration_sync(
-            &format!("zigbee2mqtt/{}:{}", self.server_info.host, self.server_info.port),
+            &format!(
+                "zigbee2mqtt/{}:{}",
+                self.server_info.host, self.server_info.port
+            ),
             zigbee_devices
                 .into_iter()
                 .filter_map(|d| d.into_device(&self.server_info)),
-        ).await?;
+        )
+        .await?;
 
         Ok(())
     }

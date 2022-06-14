@@ -1,15 +1,11 @@
 use anyhow::Result;
 use bonsaidb::core::schema::{Collection, SerializedCollection};
 use chrono::{DateTime, Utc};
-use dashmap::DashMap;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{actor::UntypedAddr, database};
+use crate::database;
 
 use super::TaskSpec;
-
-static DEVICE_TASKS: Lazy<DashMap<String, Vec<UntypedAddr>>> = Lazy::new(DashMap::new);
 
 #[derive(Debug, Serialize, Deserialize, Collection)]
 #[collection(name = "devices", primary_key = String, natural_id = |d: &Device| Some(d.id.clone()))]
@@ -46,10 +42,10 @@ impl Device {
         integration: &str,
         devices: impl Iterator<Item = Device>,
     ) -> Result<()> {
-        
         for device in devices {
-            let tasks = device.task_spec.into_iter().map(|t| t.start().unwrap()).collect();
-            DEVICE_TASKS.insert(device.id.clone(), tasks);
+            for spec in device.task_spec.into_iter() {
+                spec.start()?;
+            }
         }
 
         Ok(())

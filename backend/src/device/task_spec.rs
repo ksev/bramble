@@ -1,13 +1,11 @@
+use crate::actor::prelude::*;
+use crate::io::mqtt::MqttServerInfo;
+use crate::io::mqtt::{Mqtt, Subscribe};
 use anyhow::Result;
 use async_trait::async_trait;
-use jsonpath_rust::JsonPathQuery;
 use rumqttc::Publish;
 use serde::{Deserialize, Serialize};
-use tracing::error;
-
-use crate::actor::prelude::*;
-use crate::io::mqtt::{Mqtt, Subscribe};
-use crate::{actor::UntypedAddr, io::mqtt::MqttServerInfo};
+use tracing::warn;
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TaskSpec {
@@ -19,18 +17,17 @@ pub enum TaskSpec {
 }
 
 impl TaskSpec {
-    pub fn start(self) -> Result<UntypedAddr> {
+    pub fn start(self) -> Result<()> {
         match self {
             TaskSpec::Mqtt {
                 server_info,
                 topic,
                 value_spec: ValueSpec::Json(value_spec),
-            } => {
-                Ok(
-                    SourceMqttSubscribeJson::start(server_info.clone(), topic.clone(), value_spec)?
-                        .untyped_reference(),
-                )
-            }
+            } => Ok(SourceMqttSubscribeJson::start(
+                server_info.clone(),
+                topic.clone(),
+                value_spec,
+            )?),
         }
     }
 }
@@ -42,7 +39,7 @@ pub enum ValueSpec {
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct JsonSpec {
-    pub query: String,
+    pub pointer: String,
     pub name: String,
 }
 
@@ -57,14 +54,14 @@ impl SourceMqttSubscribeJson {
         server_info: MqttServerInfo,
         topic: String,
         value_spec: Vec<JsonSpec>,
-    ) -> Result<Addr<SourceMqttSubscribeJson>> {
+    ) -> Result<()> {
         let mqtt = Mqtt::connect(server_info);
         let addr = SourceMqttSubscribeJson { value_spec }.start();
 
         let saddr = addr.clone();
-        let _ = mqtt.send(Subscribe(topic, saddr.to_weak().into()))?;
+        mqtt.subscribe(topic, saddr.into());
 
-        Ok(addr)
+        Ok(())
     }
 }
 
@@ -80,9 +77,9 @@ impl Handler<Publish> for SourceMqttSubscribeJson {
         let json: serde_json::Value = serde_json::from_slice(&message.payload).unwrap();
 
         for spec in self.value_spec.iter() {
-            match json.clone().path(&spec.query) {
-                Ok(data) => println!("{}", data),
-                Err(e) => error!("jsonpath error: {e:?}"),
+            match json.pointer(spec.pointer) {
+                Some(data) => println!("{data:?}"),
+                None => warn!("json pointer {} not found", spec.pointer),
             }
         }
     }
