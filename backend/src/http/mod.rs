@@ -1,8 +1,9 @@
 mod pipe;
 mod rpc;
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, collections::BTreeMap};
 
+use anyhow::Result;
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -14,13 +15,19 @@ use axum::{
     routing::{get, get_service},
     Router, TypedHeader,
 };
-use tokio::{select, sync::mpsc::Sender};
+use tokio::select;
 use tower_http::services::ServeDir;
 use tracing::{debug, error};
 
 use pipe::{error_message, PipeMessage};
 
-pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
+use crate::actor::{Context, ContextSpawner, Pid, Receive, Task, Trap, ExitReason};
+
+use self::pipe::PipeRequest;
+
+pub async fn listen(ctx: Receive<()>, address: SocketAddr) -> Result<()> {
+    let spawner = ctx.spawner();
+
     let app = Router::new()
         .fallback(
             get_service(
@@ -35,7 +42,10 @@ pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
         )
         // routes are matched from bottom to top, so we have to put `nest` at the
         // top since it matches all routes
-        .route("/pipe", get(ws_handler));
+        .route(
+            "/pipe",
+            get(|ws, user_agent| ws_handler(spawner, ws, user_agent)),
+        );
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
@@ -49,6 +59,7 @@ pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
 }
 
 async fn ws_handler(
+    spawner: ContextSpawner,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
 ) -> impl IntoResponse {
@@ -56,29 +67,26 @@ async fn ws_handler(
         debug!("`{}` connected", user_agent.as_str());
     }
 
-    ws.on_upgrade(handle_socket)
+    ws.on_upgrade(|socket| async move {
+        spawner.spawn_with_argument(connection, socket);
+    })
 }
 
-async fn handle_socket(socket: WebSocket) {
-    match handle_socket_err(socket).await {
-        Ok(_) => {}
-        Err(e) => error!("{}", e),
-    }
-}
+async fn connection(ctx: Trap<Vec<u8>>, mut socket: WebSocket) -> Result<()> {
+    use crate::actor::Signal;
 
-async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
-    let (tx, mut rx) = tokio::sync::mpsc::channel(5);
+    let mut procs = BTreeMap::new();
 
     loop {
         select! {
             Some(Ok(msg)) = socket.recv() => {
                 match msg {
                     Message::Binary(v) => {
-                        if let Err(e) = handle_pipe_action(v, tx.clone()).await {
+                        if let Err(e) = handle_pipe_action(&ctx, &mut procs, v).await {
                             error!("{e}");
 
                             let msg = error_message(0x0, &format!("{e}"));
-                            tx.send(msg).await?;
+                            ctx.pid().send(msg);
                         }
                     }
                     Message::Close(_) => break,
@@ -86,9 +94,18 @@ async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
                 }
             }
 
-            Some(message) = rx.recv() => {
-                socket.send(Message::Binary(message)).await?;
-            }
+            message = ctx.trap() => match message {
+                Signal::Exit((id, reason)) => { 
+                    if let Some(channel_id) = procs.remove(&id) {
+                        // Make sure we let the client know the proc failed
+                        if let ExitReason::Error(e) = reason {
+                            let msg = error_message(channel_id, &format!("{e}"));
+                            ctx.pid().send(msg);
+                        }
+                    }
+                },
+                Signal::Message(message) => { socket.send(Message::Binary(message)).await?; },
+            },
 
             else => {
                 break;
@@ -96,27 +113,27 @@ async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
         };
     }
 
-    debug!("client disconnected");
-
     Ok(())
 }
 
-async fn handle_pipe_action(data: Vec<u8>, response: Sender<Vec<u8>>) -> anyhow::Result<()> {
+async fn handle_pipe_action(ctx: &Trap<Vec<u8>>, procs: &mut BTreeMap<usize, u16>, data: Vec<u8>) -> Result<()> {
     match PipeMessage::try_from(data)? {
-        PipeMessage::Request(ctx) => {
-            tokio::spawn(async move {
-                let resp = response.clone();
-                let channel_id = ctx.channel_id;
+        PipeMessage::Request(preq) => {
+            let channel_id = preq.channel_id;
+            let arg = (preq, ctx.pid());
+            let proc = ctx.spawn_link_with_argument(rpc_call, arg);
 
-                if let Err(e) = rpc::ROUTER.route(ctx, resp).await {
-                    let msg = error_message(channel_id, &format!("{e}"));
-                    response.send(msg).await.expect("Can send on channel");
-                }
-            });
+            // Keep track of live procs
+            procs.insert(proc.actor_id(), channel_id);
         }
 
         PipeMessage::Close => { /* Do nothing for now */ }
     };
 
+    Ok(())
+}
+
+async fn rpc_call(ctx: Task, (req, receiver): (PipeRequest, Pid<Vec<u8>>)) -> Result<()> {
+    rpc::ROUTER.route(ctx, req, receiver).await?;
     Ok(())
 }

@@ -28,11 +28,11 @@ pub struct Zigbee2MqttServers {
 pub trait Zigbee2MqttService {
     
         
-            async fn config(input: Zigbee2MqttConfig) -> anyhow::Result<Zigbee2MqttServer>;
+            async fn config(ctx: crate::actor::Task, input: Zigbee2MqttConfig) -> anyhow::Result<Zigbee2MqttServer>;
         
     
         
-            async fn status(input: Void) -> anyhow::Result<Zigbee2MqttServers>;
+            async fn status(ctx: crate::actor::Task, input: Void) -> anyhow::Result<Zigbee2MqttServers>;
         
     
 }
@@ -42,40 +42,43 @@ pub struct Zigbee2MqttServiceRouter<T> {
     _marker: std::marker::PhantomData<T>,
 }
 
-#[async_trait::async_trait]
 impl<T> super::ServiceRouter for Zigbee2MqttServiceRouter<T> where T: Zigbee2MqttService + Send + Sync + Default {
     fn id(&self) -> u16 {
         0xd109
     }
 
-    async fn route(&self, req: crate::http::pipe::PipeRequest, tx: tokio::sync::mpsc::Sender<Vec<u8>>) -> anyhow::Result<()> {
+    fn route(&self, ctx: crate::actor::Task, req: crate::http::pipe::PipeRequest, pid: crate::actor::Pid<Vec<u8>>) -> futures::future::BoxFuture<'static, anyhow::Result<()>> {
         use prost::Message as _;
 
-        match req.call_id {
-            
-                0xd74e => {
-                    
-                        let input = Zigbee2MqttConfig::decode(req.payload_slice())?;
-                        let data = T::config(input).await?;
-                        let out = crate::http::pipe::response_message(req.channel_id, data)?;
-                        tx.send(out).await?;
+        Box::pin(async move {
+            match req.call_id {
+                
+                    0xd74e => {
+                        
+                            let input = Zigbee2MqttConfig::decode(req.payload_slice())?;
+                            let data = T::config(ctx, input).await?;
 
-                        Ok(())
-                    
-                },
-            
-                0x9b83 => {
-                    
-                        let input = Void::decode(req.payload_slice())?;
-                        let data = T::status(input).await?;
-                        let out = crate::http::pipe::response_message(req.channel_id, data)?;
-                        tx.send(out).await?;
+                            let out = crate::http::pipe::response_message(req.channel_id, data)?;
+                            pid.send(out);
 
-                        Ok(())
-                    
-                },
-            
-            _ =>  anyhow::bail!("invalid call id {}", req.call_id),
-        }
+                            Ok(())
+                        
+                    },
+                
+                    0x9b83 => {
+                        
+                            let input = Void::decode(req.payload_slice())?;
+                            let data = T::status(ctx, input).await?;
+
+                            let out = crate::http::pipe::response_message(req.channel_id, data)?;
+                            pid.send(out);
+
+                            Ok(())
+                        
+                    },
+                
+                _ =>  anyhow::bail!("invalid call id {}", req.call_id),
+            }
+        })
     }
 }

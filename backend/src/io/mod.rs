@@ -1,1 +1,3 @@
-pub mod mqtt;
+mod mqtt;
+
+pub use mqtt::{mqtt, Mqtt};

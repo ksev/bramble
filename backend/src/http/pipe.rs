@@ -9,6 +9,8 @@ use anyhow::{bail, Error};
 use bytes::BufMut;
 use std::iter::once;
 
+use crate::actor::Pid;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum PipeAction {
@@ -47,6 +49,13 @@ impl PipeRequest {
     pub fn payload_slice(&self) -> &[u8] {
         &self.data[7..]
     }
+}
+
+pub struct PipeResponse<T> {
+    channel_id: u16,
+    service_id: u16,
+    pid: Pid<Vec<u8>>,
+    _marker: std::marker::PhantomData<T>,
 }
 
 /// A message comming into a Pipe

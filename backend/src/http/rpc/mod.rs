@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 
+use anyhow::Result;
+use futures::future::BoxFuture;
 use once_cell::sync::Lazy;
-use tokio::sync::mpsc::Sender;
+
+use crate::actor::{Pid, Task};
 
 use super::pipe::PipeRequest;
 
@@ -11,10 +14,14 @@ mod zigbee2mqtt;
 pub static ROUTER: Lazy<Router> = Lazy::new(Router::default);
 
 /// Trait every RPC service has to implement to be routable
-#[async_trait::async_trait]
 pub trait ServiceRouter {
     fn id(&self) -> u16;
-    async fn route(&self, req: PipeRequest, tx: Sender<Vec<u8>>) -> anyhow::Result<()>;
+    fn route(
+        &self,
+        task: Task,
+        req: PipeRequest,
+        res: Pid<Vec<u8>>,
+    ) -> BoxFuture<'static, Result<()>>;
 }
 
 /// RPC router, routes requests from the clients to the correct service and call
@@ -37,9 +44,9 @@ impl Router {
     }
 
     /// Route between the different services
-    pub async fn route(&self, req: PipeRequest, response: Sender<Vec<u8>>) -> anyhow::Result<()> {
+    pub async fn route(&self, task: Task, req: PipeRequest, resp: Pid<Vec<u8>>) -> Result<()> {
         if let Some(s) = self.service_routes.get(&req.service_id) {
-            Ok(s.route(req, response).await?)
+            Ok(s.route(task, req, resp).await?)
         } else {
             anyhow::bail!("invalid service_id");
         }
