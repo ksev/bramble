@@ -30,4 +30,4 @@ target
 
 *_generated*
 ui/src/net/protocol
-rome.db
+data/

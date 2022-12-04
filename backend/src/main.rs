@@ -1,15 +1,15 @@
-mod actor;
-//mod database;
-//mod device;
+mod bus;
 mod http;
-//mod integration;
+mod integration;
 mod io;
+mod task;
+mod device;
 
-use actor::{Context, System, Trap, Task};
+use std::str::FromStr;
+
 use anyhow::Result;
-use tracing::error;
 
-use crate::actor::Signal;
+use task::Task;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,48 +21,22 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    loop {
-        let sys = System::new();
-
-        sys.spawn_linked(start);
-
-        if let Err(e) = sys.join().await {
-            error!("Main loop: {e:?}");
-        }
-    }
-}
-
-async fn start(ctx: Task) -> Result<()> {
-    // Start web server
-    let address = "0.0.0.0:8080".parse().unwrap();
-    ctx.spawn_link_with_argument(http::listen, address);
-
-    // Start mqtt connection supervisor
-    ctx.spawn_link(io::mqtt);
-
-
-    // We will never receive anything to just block
-    ctx.receive().await;
+    task::create_group(init).complete().await?;
 
     Ok(())
 }
 
-/*
-fn chain(ctx: Receive<String>, count: usize) -> BoxFuture<'static, Result<()>> {
-    Box::pin(async move {
-        if count < 100_000 {
-            let next = ctx.spawn_link_with_argument(chain, count + 1);
+async fn init(task: Task) -> Result<()> {
+    task.spawn("http", http);
+    task.spawn("mqtt_connections", io::mqtt::manage_connections);
+    task.spawn("device_add", device::add_device);
 
-            loop {
-                let msg = ctx.receive().await;
-                next.send(msg);
-            }
-        } else {
-            loop {
-                let msg = ctx.receive().await;
-                println!("msg: {msg}");
-            }
-        }
-    })
+    Ok(())
 }
- */
+
+async fn http(_: Task) -> Result<()> {
+    let addr = std::net::SocketAddr::from_str("127.0.0.1:8080")?;
+    http::listen(addr).await?;
+
+    Ok(())
+}

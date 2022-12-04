@@ -5,34 +5,35 @@
 
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
-    import { zigbee2MqttService } from '$net/pipe';
-    import { Zigbee2MQTTServer } from '$net/protocol';
 
-    let url: string;
+    import { pipe } from '$net/pipe';
+
+    let host: string;
     let password: string;
     let username: string;
+    let port = 1883;
 
-    let connected: Array<Zigbee2MQTTServer> = [];
+    let connected = [];
 
     let isEmpty = true;
     $: isEmpty = connected.length === 0;
 
-    // Fetch the connected servers will refetch on connection failure
-    $: $zigbee2MqttService?.status({}).then(data => connected = data.servers);
-
     async function changeSettings() {
-        try {
-            const result = await $zigbee2MqttService.config({
-                url,
-                username,
-                password,
-            });
-
-            connected = [...connected, result];
-        } catch (e) {
-            // TODO: Display nice error
-            console.error(e);
-        }
+        $pipe.send(JSON.stringify({
+                topic: "device.add",
+                payload: {
+                    id: `zigbee2mqtt:${host}:${port}`,
+                    name: `Zigbee2Mqtt (${host})`,
+                    group: 'integration/zigbee2mqtt',
+                    task_spec: [{
+                        type: 'zigbee2Mqtt',
+                        host,
+                        port,
+                        username,
+                        password,
+                    }]
+                }
+            }));
     }
 </script>
 
@@ -42,7 +43,7 @@
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam dapibus fermentum nulla nec fringilla. Nulla finibus ligula eu purus consectetur posuere. Etiam ac vulputate libero. In porta elit non ante eleifend, eget convallis libero porta. Nulla facilisi. Nulla sed sem urna. Praesent ipsum nunc, tincidunt eu tristique quis, rutrum ut purus. Ut dapibus porttitor lacinia. 
 </p>
 <p>
-Quisque convallis maximus efficitur. Donec at elit augue. Integer facilisis libero ac erat bibendum iaculis. Pellentesque interdum semper eros non euismod. Nulla molestie nibh non turpis faucibus, in porta ligula auctor. Vestibulum quam lorem, feugiat mattis urna et, laoreet semper eros. Nullam rhoncus tristique dictum. Vestibulum placerat varius turpis ac sagittis. 
+    Quisque convallis maximus efficitur. Donec at elit augue. Integer facilisis libero ac erat bibendum iaculis. Pellentesque interdum semper eros non euismod. Nulla molestie nibh non turpis faucibus, in porta ligula auctor. Vestibulum quam lorem, feugiat mattis urna et, laoreet semper eros. Nullam rhoncus tristique dictum. Vestibulum placerat varius turpis ac sagittis. 
 </p>
 
 <div class="ledger">
@@ -78,7 +79,7 @@ Quisque convallis maximus efficitur. Donec at elit augue. Integer facilisis libe
         <section class="form">
             <div class="form-group">
                 <label for="input">MQTT server address</label>
-                <input id="input" bind:value={url} />
+                <input id="input" bind:value={host} />
             </div>
         
             <div class="form-group">
@@ -94,7 +95,7 @@ Quisque convallis maximus efficitur. Donec at elit augue. Integer facilisis libe
         
         <section class="menu">
             <SubMenu>
-                <button on:click={changeSettings} disabled={!$zigbee2MqttService}>
+                <button on:click={changeSettings} disabled={!$pipe}>
                     Connect
                 </button>
             </SubMenu>

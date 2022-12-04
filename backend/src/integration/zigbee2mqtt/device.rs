@@ -1,9 +1,10 @@
-use bonsaidb::core::transmog_pot::pot::de;
-use serde::Deserialize;
+use std::collections::BTreeMap;
+
+use serde_derive::Deserialize;
 
 use crate::{
-    device::{JsonSpec, TaskSpec, ValueSpec},
-    io::mqtt::MqttServerInfo,
+    device::{TaskSpec, ValueKind, ValueSpec},
+    io::mqtt::{MqttServerInfo, MqttSubscribe},
 };
 
 #[derive(Deserialize, Debug)]
@@ -33,31 +34,24 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn into_device(self, server_info: &MqttServerInfo) -> Option<crate::device::Device> {
-        let definition = self.definition?;
-        let device_topic = format!("zigbee2mqtt/{}", self.friendly_name);
+    pub fn into_device(self, server: MqttServerInfo) -> Option<crate::device::Device> {
+        let def = self.definition?;
 
-        let task_spec = vec![TaskSpec::Mqtt {
-            server_info: server_info.clone(),
-            topic: device_topic,
-            value_spec: ValueSpec::Json(definition.sources_spec()),
-        }];
+        let topic = format!("zigbee2mqtt/{}", self.friendly_name);
 
-        let device = crate::device::Device {
-            id: format!(
-                "zigbee2mqtt/{}:{}/{}",
-                server_info.host, server_info.port, self.ieee_address
-            ),
+        let subscribe = MqttSubscribe { server, topic };
+
+        let sources = def.to_sources();
+
+        let out = crate::device::Device {
+            id: self.ieee_address,
             name: self.friendly_name,
-            last_seen: None,
-
-            task_spec,
-
-            sources: vec![],
+            task_spec: vec![TaskSpec::Zigbee2MqttDevice(subscribe)],
+            sources,
             sinks: vec![],
         };
 
-        Some(device)
+        Some(out)
     }
 }
 
@@ -71,7 +65,7 @@ pub struct Definition {
 }
 
 impl Definition {
-    pub fn sources_spec(&self) -> Vec<JsonSpec> {
+    pub fn to_sources(&self) -> Vec<ValueSpec> {
         let mut stack = self.exposes.iter().collect::<Vec<_>>();
         let mut out = vec![];
 
@@ -82,24 +76,29 @@ impl Definition {
                     property,
                     value_on,
                     value_off,
-                    value_toggle,
                     access,
-                } if access.published() => out.push(JsonSpec {
-                    query: format!("$.{property}"),
-                    name: name.into(),
+                    ..
+                } if access.published() => out.push(ValueSpec {
+                    name: name.clone(),
+                    id: property.clone(),
+                    kind: ValueKind::Bool,
+                    meta: BTreeMap::from([
+                        ("value_on".into(), value_on.clone()),
+                        ("value_off".into(), value_off.clone()),
+                    ]),
                 }),
-                
+
                 Feature::Numeric {
                     name,
                     property,
-                    value_min,
-                    value_max,
-                    value_step,
                     unit,
                     access,
-                } if access.published() => out.push(JsonSpec {
-                    query: format!("$.{property}"),
-                    name: name.into(),
+                    ..
+                } if access.published() => out.push(ValueSpec {
+                    name: name.clone(),
+                    id: property.clone(),
+                    kind: ValueKind::Number { unit: unit.clone() },
+                    meta: BTreeMap::new(),
                 }),
 
                 Feature::Enum {
@@ -107,31 +106,37 @@ impl Definition {
                     property,
                     values,
                     access,
-                } if access.published() => out.push(JsonSpec {
-                    query: format!("$.{property}"),
-                    name: name.into(),
+                } if access.published() => out.push(ValueSpec {
+                    name: name.clone(),
+                    id: property.clone(),
+                    kind: ValueKind::State(values.clone()),
+                    meta: BTreeMap::new(),
                 }),
 
                 Feature::Text {
                     name,
                     property,
                     access,
-                } if access.published() => out.push(JsonSpec {
-                    query: format!("$.{property}"),
-                    name: name.into(),
+                } if access.published() => out.push(ValueSpec {
+                    name: name.clone(),
+                    id: property.clone(),
+                    kind: ValueKind::String,
+                    meta: BTreeMap::new(),
                 }),
 
                 Feature::List {
                     name,
                     property,
-                    item_type,
                     access,
-                } if access.published() => out.push(JsonSpec {
-                    query: format!("$.{property}"),
-                    name: name.into(),
+                    ..
+                } if access.published() => out.push(ValueSpec {
+                    name: name.clone(),
+                    id: property.clone(),
+                    kind: ValueKind::Number { unit: None },
+                    meta: BTreeMap::new(),
                 }),
 
-                Feature::Composite {features, ..} => stack.extend(features),
+                Feature::Composite { features, .. } => stack.extend(features),
                 Feature::Light { features } => stack.extend(features),
                 Feature::Switch { features } => stack.extend(features),
                 Feature::Fan { features } => stack.extend(features),
