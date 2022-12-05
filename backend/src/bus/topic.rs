@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use futures::{Stream, stream};
 use slotmap::{DefaultKey, SlotMap};
 use smallvec::smallvec;
 use tokio::sync::Notify;
@@ -15,29 +16,39 @@ impl<T> Topic<T>
 where
     T: Clone,
 {
-    pub fn subscribe(&self) -> Subscription<T> {
+    pub fn subscribe<'a>(&'a self) -> impl Stream<Item = T> + 'a {
         let mut subs = self.subs.lock().expect("Lock subscribers");
 
         let mutex = Arc::new(Mutex::new(smallvec![]));
 
-        let _key = subs.insert(Subscriber {
+        let key = subs.insert(Subscriber {
             mutex: mutex.clone(),
         });
 
-        let subscription = Subscription::new(mutex, self.notify.clone());
+        let guard = RemoveKey {
+            key,
+            subs: self.subs.clone(),
+        };
 
-        subscription
+        let subscription = Subscription::new(mutex, self.notify.clone(), guard);
+
+        let strm = stream::unfold(subscription, |mut sub| async move {
+            let val = sub.recv().await;
+            Some((val, sub))
+        });
+
+        Box::pin(strm)
     }
 
     pub fn publish(&self, payload: T) {
         {
-            let subs = self.subs.lock().expect("Lock subscribers");
+            let subs = self.subs.lock().expect("Lock subscribers failed");
             let mut iter = subs.iter().peekable();
 
             while let Some((_, sub)) = iter.next() {
                 let mut buffer = sub.mutex.lock().expect("Locking subscriber buffer failed");
 
-                if iter.peek().is_none() { 
+                if iter.peek().is_none() {
                     // We are at the last value
                     // So we can skip the last clone
                     buffer.push(payload);
@@ -58,5 +69,17 @@ impl<T> Default for Topic<T> {
             subs: Default::default(),
             notify: Default::default(),
         }
+    }
+}
+
+pub struct RemoveKey<T> {
+    subs: Arc<Mutex<SlotMap<DefaultKey, Subscriber<T>>>>,
+    key: DefaultKey
+}
+
+impl<T> Drop for RemoveKey<T> {
+    fn drop(&mut self) {
+        let mut subs = self.subs.lock().expect("Lock subscribers failed");
+        subs.remove(self.key);
     }
 }

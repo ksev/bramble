@@ -7,6 +7,8 @@ import { resocket } from "./resocket";
  */
 export const socket = resocket(`ws://${document.domain}:8080/pipe`);
 
+type Publish = any;
+
 export const pipe = derived(socket, (ws) =>
-  typeof ws === "number" ? undefined : ws
+  typeof ws === "number" ? undefined : (data: Publish) => ws.send(JSON.stringify(data))
 );

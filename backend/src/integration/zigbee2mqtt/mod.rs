@@ -8,6 +8,7 @@ use anyhow::Result;
 use bytes::Buf;
 //pub use server::*;
 pub use device::*;
+use futures::StreamExt;
 use serde_json::Value;
 
 use crate::{
@@ -25,9 +26,7 @@ pub async fn zigbee2mqtt_update(server: MqttServerInfo, _: Task) -> Result<()> {
         server: server.clone(),
     });
 
-    loop {
-        let (topic, data) = channel.recv().await;
-
+    while let Some((topic, data)) = channel.next().await {
         if topic == "zigbee2mqtt/bridge/devices" {
             let reader = data.reader();
 
@@ -43,6 +42,8 @@ pub async fn zigbee2mqtt_update(server: MqttServerInfo, _: Task) -> Result<()> {
             }
         }
     }
+
+    Ok(())
 }
 
 pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> Result<()> {
@@ -56,9 +57,7 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
 
     BUS.mqtt.subscribe.publish(subscribe.clone());
 
-    loop {
-        let (topic, data) = channel.recv().await;
-
+    while let Some((topic, data)) = channel.next().await {
         if topic != subscribe.topic {
             continue;
         }
@@ -101,4 +100,6 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
             SOURCES.set(key, output);
         }
     }
+
+    Ok(())
 }

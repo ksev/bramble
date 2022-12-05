@@ -163,6 +163,7 @@ impl std::ops::BitAnd for Access {
     }
 }
 
+#[allow(dead_code)]
 impl Access {
     const NONE: Access = Access(0);
 
@@ -178,7 +179,6 @@ impl Access {
         self.0 & mask == 0b010
     }
 
-    #[allow(dead_code)]
     /// Can you read the steaful state of this feature
     pub fn read(&self) -> bool {
         let mask = 0b100;

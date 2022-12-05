@@ -2,6 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use anyhow::Result;
 use bytes::Bytes;
+use futures::StreamExt;
 use rumqttc::{AsyncClient, ConnAck, Event, EventLoop, MqttOptions, Packet};
 use serde_derive::{Deserialize, Serialize};
 use tokio::time::timeout;
@@ -54,8 +55,7 @@ pub async fn manage_connections(_: Task) -> Result<()> {
     let mut connections: HashMap<MqttServerInfo, AsyncClient> = HashMap::new();
     let mut channel = BUS.mqtt.subscribe.subscribe();
 
-    loop {
-        let sub = channel.recv().await;
+    while let Some(sub) = channel.next().await {
         let key = sub.server.clone();
 
         if let Some(client) = connections.get_mut(&key) {
@@ -80,6 +80,8 @@ pub async fn manage_connections(_: Task) -> Result<()> {
             connections.insert(key, client);
         }
     }
+
+   Ok(())
 }
 
 async fn connect(server_info: &MqttServerInfo) -> Result<(AsyncClient, EventLoop)> {

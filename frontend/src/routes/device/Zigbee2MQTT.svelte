@@ -19,21 +19,21 @@
     $: isEmpty = connected.length === 0;
 
     async function changeSettings() {
-        $pipe.send(JSON.stringify({
-                topic: "device.add",
-                payload: {
-                    id: `zigbee2mqtt:${host}:${port}`,
-                    name: `Zigbee2Mqtt (${host})`,
-                    group: 'integration/zigbee2mqtt',
-                    task_spec: [{
-                        type: 'zigbee2Mqtt',
-                        host,
-                        port,
-                        username,
-                        password,
-                    }]
-                }
-            }));
+        $pipe({
+            topic: "device.add",
+            payload: {
+                id: `zigbee2mqtt:${host}:${port}`,
+                name: `Zigbee2Mqtt (${host})`,
+                group: 'integration/zigbee2mqtt',
+                task_spec: [{
+                    type: 'zigbee2Mqtt',
+                    host,
+                    port,
+                    username,
+                    password,
+                }]
+            }
+        })
     }
 </script>
 

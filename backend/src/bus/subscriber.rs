@@ -2,8 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use smallvec::SmallVec;
 use tokio::sync::Notify;
-//use slotmap::{DefaultKey, SlotMap};
-use tracing::warn;
 
 pub struct Subscriber<T> {
     pub mutex: Arc<Mutex<SmallVec<[T; 1]>>>,
@@ -12,17 +10,16 @@ pub struct Subscriber<T> {
 pub struct Subscription<T> {
     mutex: Arc<Mutex<SmallVec<[T; 1]>>>,
     notify: Arc<Notify>,
-    /*
-       subs: Arc<Mutex<SlotMap<DefaultKey, Subscriber<T>>>>,
-       key: DefaultKey,
-    */
+    
+    _guard: super::RemoveKey<T>,
 }
 
 impl<T> Subscription<T> {
-    pub fn new(shared: Arc<Mutex<SmallVec<[T; 1]>>>, notify: Arc<Notify>) -> Subscription<T> {
+    pub fn new(shared: Arc<Mutex<SmallVec<[T; 1]>>>, notify: Arc<Notify>, guard: super::RemoveKey<T>) -> Subscription<T> {
         Subscription {
             mutex: shared,
             notify,
+            _guard: guard,
         }
     }
 
@@ -38,14 +35,5 @@ impl<T> Subscription<T> {
 
             self.notify.notified().await;
         }
-    }
-}
-
-impl<T> Drop for Subscription<T> {
-    fn drop(&mut self) {
-        //let mut subs = self.subs.lock().expect("This is a bad idea");
-        //subs.remove(self.key);
-        // TODO: Fix this
-        warn!("Topic dropped, this need to clean")
     }
 }

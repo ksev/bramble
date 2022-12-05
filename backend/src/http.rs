@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     extract::{
@@ -11,11 +11,15 @@ use axum::{
     routing::{get, get_service},
     Router, TypedHeader,
 };
+
+use futures::{stream::SplitSink, SinkExt, StreamExt};
+use futures_concurrency::prelude::*;
+
 use serde_derive::{Deserialize, Serialize};
 use tower_http::services::ServeDir;
 use tracing::{debug, error};
 
-use crate::bus::BUS;
+use crate::{bus::BUS, device::Device};
 
 pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
     let app = Router::new()
@@ -71,34 +75,47 @@ struct Publish {
 
 #[derive(Serialize)]
 #[serde(tag = "type")]
-pub enum Response {
+pub enum Response<'a> {
+    #[serde(rename = "error")]
     Error { message: String },
+    #[serde(rename = "device")]
+    Device(&'a Device),
+    #[serde(rename = "value")]
+    Value {
+        device: &'a str,
+        property: &'a str,
+        value: &'a Result<serde_json::Value, String>,
+    },
 }
 
-async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
-    while let Some(data) = socket.recv().await {
-        let message = match data {
-            Ok(message) => message,
-            Err(e) => {
-                socket.send(error_message(e)?).await?;
-                continue;
-            }
+pub enum Update {
+    Socket(Result<Message, axum::Error>),
+    Device(Arc<Device>),
+    Value((String, String, Result<serde_json::Value, String>)),
+}
+
+async fn handle_socket_err(socket: WebSocket) -> anyhow::Result<()> {
+    let mut devices = BUS.device.add.subscribe().map(Update::Device);
+    let mut values = BUS.device.value.subscribe().map(Update::Value);
+
+    let (mut socket, incoming) = socket.split();
+    let mut incoming = incoming.map(Update::Socket);
+
+    loop {
+        let next = (incoming.next(), devices.next(), values.next());
+
+        let Some(output) = next.race().await else {
+            // The only time we get a None is when the socket closes,
+            // Then we just break out of the loop
+            break;
         };
 
-        let Message::Text(payload) = message else {
-            continue;
-        };
+        if let Err(err) = handle_update(&mut socket, output).await {
+            let data = serde_json::to_string(&Response::Error {
+                message: format!("{err:?}"),
+            })?;
 
-        let message: Publish = match serde_json::from_str(&payload) {
-            Ok(message) => message,
-            Err(e) => {
-                socket.send(error_message(e)?).await?;
-                continue;
-            }
-        };
-
-        if let Err(e) = handle_action(message).await {
-            socket.send(error_message(e)?).await?;
+            socket.send(Message::Text(data)).await?;
         }
     }
 
@@ -107,17 +124,35 @@ async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn error_message<T: std::fmt::Debug>(err: T) -> anyhow::Result<Message> {
-    let data = serde_json::to_string(&Response::Error {
-        message: format!("{err:?}"),
-    })?;
+async fn handle_update(
+    socket: &mut SplitSink<WebSocket, Message>,
+    update: Update,
+) -> anyhow::Result<()> {
+    match update {
+        Update::Socket(data) => {
+            let message = data;
+            let Message::Text(payload) = message? else {
+                anyhow::bail!("Payload must be of Text type");
+            };
 
-    Ok(Message::Text(data))
-}
+            let message: Publish = serde_json::from_str(&payload)?;
 
-async fn handle_action(message: Publish) -> anyhow::Result<()> {
-    let Publish { topic, payload } = message;
-    BUS.publish_dynamic(&topic, payload)?;
+            let Publish { topic, payload } = message;
+            BUS.publish_dynamic(&topic, payload)?;
+        }
+        Update::Device(device) => {
+            let data = serde_json::to_string(&Response::Device(&device))?;
+            socket.send(Message::Text(data)).await?;
+        }
+        Update::Value(value) => {
+            let data = serde_json::to_string(&Response::Value {
+                device: &value.0,
+                property: &value.1,
+                value: &value.2,
+            })?;
+            socket.send(Message::Text(data)).await?;
+        }
+    }
 
     Ok(())
 }

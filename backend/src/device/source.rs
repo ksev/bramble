@@ -2,6 +2,8 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use tracing::debug;
 
+use crate::bus::BUS;
+
 pub static SOURCES: Lazy<Sources> = Lazy::new(|| Sources::default());
 
 /// Sources a struct that keeps all the current values from all the sources the application know about
@@ -20,8 +22,13 @@ impl Sources {
 
         if !same {
             debug!("{:?} update source {:?}", key, value);
+
+            BUS.device.value.publish((key.0.clone(), key.1.clone(), value.clone()));
+
             self.storage.insert(key, value);
-            // Report on the bus
+            
+
+
         }
     }
 }
