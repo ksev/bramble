@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -2 24 24" width="24" height="24" fill="currentColor"><path d="M2 18h6v-1H2v1zm.294-3c-.6-1.825-1.032-3.825-1.294-6-.362-3-.362-6 0-9h8c.311 3.329.311 6.329 0 9a32.729 32.729 0 0 1-1.287 6H8a2 2 0 0 1 2 2v3H0v-3a2 2 0 0 1 2-2h.294zm.692-6.24c.277 2.304.753 4.383 1.423 6.24H5.61a30.946 30.946 0 0 0 1.402-6.231c.238-2.037.283-4.294.135-6.769h-4.33a35.456 35.456 0 0 0 .168 6.76z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trophy" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <line x1="8" y1="21" x2="16" y2="21" />
+  <line x1="12" y1="17" x2="12" y2="21" />
+  <line x1="7" y1="4" x2="17" y2="4" />
+  <path d="M17 4v8a5 5 0 0 1 -10 0v-8" />
+  <circle cx="5" cy="9" r="2" />
+  <circle cx="19" cy="9" r="2" />
+</svg>
+
+

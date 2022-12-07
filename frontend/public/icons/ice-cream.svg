@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -2 24 24" width="24" height="24" fill="currentColor"><path d="M5 2a3 3 0 0 0-3 3v6a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V5a3 3 0 0 0-3-3zm1 12v5a1 1 0 0 1-2 0v-5H3a3 3 0 0 1-3-3V5a5 5 0 1 1 10 0v6a3 3 0 0 1-3 3H6z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ice-cream" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M12 21.5v-4.5" />
+  <path d="M8 17h8v-10a4 4 0 1 0 -8 0v10z" />
+  <path d="M8 10.5l8 -3.5" />
+  <path d="M8 14.5l8 -3.5" />
+</svg>
+
+
