@@ -1,18 +1,18 @@
 <script lang="ts">
     import Colors from '$data/colors';
     import { get } from 'svelte/store';
-    import { automateContext, type HalfEdgeData } from "./automate";
+    import { automateContext, type IncompleteConnection } from './automate';
 
-    export let data: HalfEdgeData;
+    const { anchors, pointer } = automateContext();
 
-    const { pointer, anchors } = automateContext();
+    export let data: IncompleteConnection;
 
     let d = "";
 
     $: if (data) {
-        if ('output' in data) {
+        if (data.startDirection === 'output') {
             // Giving up reactivity here does not matter
-            const from = get(anchors(data.output));
+            const from = get(anchors(data.start));
             const to = data.over ? get(anchors(data.over)) : $pointer;
 
             d = `
@@ -20,7 +20,7 @@
                 L${to.x},${to.y}
             `;  
         } else {
-            const to = get(anchors(data.input));
+            const to = get(anchors(data.start));
             const from = data.over ? get(anchors(data.over)) : $pointer;
 
             d = `                

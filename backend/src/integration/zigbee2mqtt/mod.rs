@@ -36,7 +36,7 @@ pub async fn zigbee2mqtt_update(server: MqttServerInfo, _: Task) -> Result<()> {
             let iter = device_spec
                 .into_iter()
                 .filter_map(|d| d.into_device(server.clone()));
-
+                
             for device in iter {
                 BUS.device.add.publish(Arc::new(device));
             }
@@ -65,13 +65,13 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
         let rdr = data.reader();
         let json: serde_json::Value = serde_json::de::from_reader(rdr)?;
 
-        for spec in &device.sources {
+        for spec in device.features.iter().filter(|f| f.direction.can_read()) {
             let ptr = &format!("/{}", spec.id);
             let key = (device.id.clone(), spec.id.clone());
 
             let Some(mut value) = json.pointer(ptr) else {
                 // Set error in Sensor map
-                let v = Err(format!("Could not extract value with pointer {}", ptr));
+                let v = Err(format!("Invalid JSON pointer {}\n{:#?}", ptr, json));
                 SOURCES.set(key, v);
                 continue;
             };

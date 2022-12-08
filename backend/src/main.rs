@@ -4,6 +4,7 @@ mod integration;
 mod io;
 mod task;
 mod device;
+mod db;
 
 use std::str::FromStr;
 
@@ -15,9 +16,11 @@ use task::Task;
 async fn main() -> Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
 
+    /*
     if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "backend=debug,tokio=error,runtime=error")
+        std::env::set_var("RUST_LOG", "backend=error,tokio=error,runtime=error")
     }
+     */
 
     tracing_subscriber::fmt::init();
 

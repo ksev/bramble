@@ -10,7 +10,7 @@ export default {
     '/devices': Devices,
     '/device/add': DeviceAdd,
     '/device/add/zigbee2mqtt': Zigbee2MQTT,
-    '/device/:deviceid/sink/:sinkid/automate': Automate,
+    '/device/:deviceid/:property/automate': Automate,
     // The catch-all route must always be last
     '*': NotFound
 };

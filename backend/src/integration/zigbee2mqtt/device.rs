@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
 use serde_derive::Deserialize;
+use tracing::error;
 
 use crate::{
-    device::{TaskSpec, ValueKind, ValueSpec},
+    device::{TaskSpec, ValueDirection, ValueKind, ValueSpec},
     io::mqtt::{MqttServerInfo, MqttSubscribe},
 };
 
@@ -41,14 +42,13 @@ impl Device {
 
         let subscribe = MqttSubscribe { server, topic };
 
-        let sources = def.to_sources();
+        let features = def.to_value_specs();
 
         let out = crate::device::Device {
             id: self.ieee_address,
             name: self.friendly_name,
             task_spec: vec![TaskSpec::Zigbee2MqttDevice(subscribe)],
-            sources,
-            sinks: vec![],
+            features,
         };
 
         Some(out)
@@ -65,7 +65,7 @@ pub struct Definition {
 }
 
 impl Definition {
-    pub fn to_sources(&self) -> Vec<ValueSpec> {
+    pub fn to_value_specs(&self) -> Vec<ValueSpec> {
         let mut stack = self.exposes.iter().collect::<Vec<_>>();
         let mut out = vec![];
 
@@ -78,15 +78,26 @@ impl Definition {
                     value_off,
                     access,
                     ..
-                } if access.published() => out.push(ValueSpec {
-                    name: name.clone(),
-                    id: property.clone(),
-                    kind: ValueKind::Bool,
-                    meta: BTreeMap::from([
-                        ("value_on".into(), value_on.clone()),
-                        ("value_off".into(), value_off.clone()),
-                    ]),
-                }),
+                } => {
+                    let direction = match access.try_into() {
+                        Ok(dir) => dir,
+                        Err(e) => {
+                            error!("{e:?}");
+                            continue;
+                        }
+                    };
+
+                    out.push(ValueSpec {
+                        name: name.clone(),
+                        id: property.clone(),
+                        kind: ValueKind::Bool,
+                        direction,
+                        meta: BTreeMap::from([
+                            ("value_on".into(), value_on.clone()),
+                            ("value_off".into(), value_off.clone()),
+                        ]),
+                    })
+                }
 
                 Feature::Numeric {
                     name,
@@ -94,47 +105,93 @@ impl Definition {
                     unit,
                     access,
                     ..
-                } if access.published() => out.push(ValueSpec {
-                    name: name.clone(),
-                    id: property.clone(),
-                    kind: ValueKind::Number { unit: unit.clone() },
-                    meta: BTreeMap::new(),
-                }),
+                } => {
+                    let direction = match access.try_into() {
+                        Ok(dir) => dir,
+                        Err(e) => {
+                            error!("{e:?}");
+                            continue;
+                        }
+                    };
+
+                    out.push(ValueSpec {
+                        name: name.clone(),
+                        id: property.clone(),
+                        direction,
+                        kind: ValueKind::Number { unit: unit.clone() },
+                        meta: BTreeMap::new(),
+                    })
+                }
 
                 Feature::Enum {
                     name,
                     property,
                     values,
                     access,
-                } if access.published() => out.push(ValueSpec {
-                    name: name.clone(),
-                    id: property.clone(),
-                    kind: ValueKind::State(values.clone()),
-                    meta: BTreeMap::new(),
-                }),
+                } => {
+                    let direction = match access.try_into() {
+                        Ok(dir) => dir,
+                        Err(e) => {
+                            error!("{e:?}");
+                            continue;
+                        }
+                    };
+
+                    out.push(ValueSpec {
+                        name: name.clone(),
+                        id: property.clone(),
+                        direction,
+                        kind: ValueKind::State {
+                            possible: values.clone(),
+                        },
+                        meta: BTreeMap::new(),
+                    })
+                }
 
                 Feature::Text {
                     name,
                     property,
                     access,
-                } if access.published() => out.push(ValueSpec {
-                    name: name.clone(),
-                    id: property.clone(),
-                    kind: ValueKind::String,
-                    meta: BTreeMap::new(),
-                }),
+                } => {
+                    let direction = match access.try_into() {
+                        Ok(dir) => dir,
+                        Err(e) => {
+                            error!("{e:?}");
+                            continue;
+                        }
+                    };
+
+                    out.push(ValueSpec {
+                        name: name.clone(),
+                        id: property.clone(),
+                        direction,
+                        kind: ValueKind::String,
+                        meta: BTreeMap::new(),
+                    })
+                }
 
                 Feature::List {
                     name,
                     property,
                     access,
                     ..
-                } if access.published() => out.push(ValueSpec {
-                    name: name.clone(),
-                    id: property.clone(),
-                    kind: ValueKind::Number { unit: None },
-                    meta: BTreeMap::new(),
-                }),
+                } => {
+                    let direction = match access.try_into() {
+                        Ok(dir) => dir,
+                        Err(e) => {
+                            error!("{e:?}");
+                            continue;
+                        }
+                    };
+
+                    out.push(ValueSpec {
+                        name: name.clone(),
+                        id: property.clone(),
+                        direction,
+                        kind: ValueKind::Number { unit: None },
+                        meta: BTreeMap::new(),
+                    })
+                }
 
                 Feature::Composite { features, .. } => stack.extend(features),
                 Feature::Light { features } => stack.extend(features),
@@ -143,8 +200,6 @@ impl Definition {
                 Feature::Cover { features } => stack.extend(features),
                 Feature::Lock { features } => stack.extend(features),
                 Feature::Climate { features } => stack.extend(features),
-
-                _ => { /* We dont care about Writes, yet atleast */ }
             };
         }
 
@@ -163,8 +218,8 @@ impl std::ops::BitAnd for Access {
     }
 }
 
-#[allow(dead_code)]
 impl Access {
+    #[allow(unused)]
     const NONE: Access = Access(0);
 
     /// Is the value of this feature published in a channel
@@ -179,10 +234,24 @@ impl Access {
         self.0 & mask == 0b010
     }
 
+    #[allow(unused)]
     /// Can you read the steaful state of this feature
     pub fn read(&self) -> bool {
         let mask = 0b100;
         self.0 & mask == 0b100
+    }
+}
+
+impl TryFrom<&Access> for ValueDirection {
+    type Error = anyhow::Error;
+
+    fn try_from(acc: &Access) -> Result<Self, Self::Error> {
+        Ok(match (acc.published(), acc.write()) {
+            (true, true) => ValueDirection::SourceSink,
+            (true, false) => ValueDirection::Source,
+            (false, true) => ValueDirection::Sink,
+            (false, false) => anyhow::bail!("Can't read nor write feature"),
+        })
     }
 }
 

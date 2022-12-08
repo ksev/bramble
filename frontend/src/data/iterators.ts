@@ -127,6 +127,19 @@ export function* chain<T>(...args: Iterable<T>[]){
 }
 
 /**
+ * Filter an iterator with the callback predicate, calls returning true are kept
+ * @param it A base iterator
+ * @param callback A predicate that decides if the value is worth it
+ */
+export function* filter<T>(it: Iterable<T>, callback: (val: T) => boolean) {
+    for (const v of it) {
+        if (callback(v)) {
+            yield v;
+        }
+    }
+}
+
+/**
  * Iterate of an iterator using a sliding window aproach.
  * Values a going to be yielded in groups of N until the iterator is exhausted
  * @param it Iterator

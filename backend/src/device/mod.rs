@@ -23,7 +23,16 @@ pub struct DeviceBus {
 pub async fn add_device(mut t: Task) -> Result<()> {
     let mut channel = BUS.device.add.subscribe();
 
+    // At startup we start all the tasks for saved devices
+    for device in Device::all()? {
+        // TODO: Maybe not allocate here?
+        Arc::new(device).spawn_tasks(&mut t).await;
+    }
+
     while let Some(device) = channel.next().await {
+        // Persist the device
+        device.save()?;
+        // Spawn it's tasks
         device.spawn_tasks(&mut t).await;
     }
 

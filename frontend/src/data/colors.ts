@@ -8,13 +8,12 @@ export default {
     icon: Color("#b7bac8"),
     device: Color("#6cb6ff"),
     feature: Color("#6c6dff"),
-    automation: Color("#ff6c6d"),
+    automation: Color("rgb(16, 148, 213)"),
     source: Color("#6cb6ff"),
     sink: Color("#ff6c6d"),
-    //sourcesink: Color("#b46cff"),
+    sourcesink: Color("#b46cff"),
     transparent: Color('rgba(0,0,0,0)'),
     error: Color("rgb(244, 98, 98)"),
 }
 
 export { Color };
-

@@ -1,21 +1,16 @@
 <script lang="ts">
-    import { type Input, IOId } from "./automate";
-    import IOAnchor from "./IOAnchor.svelte";
+    import { type Slot, SlotRef } from "./automate";
+    import SlotAnchor from "./SlotAnchor.svelte";
 
-    export let nodeId: number;
-    export let data: Input;
+    export let nodeId: string;
+    export let slot: Slot;
 
-    const ioid = new IOId(nodeId, data.id);
+    const ioid = new SlotRef(nodeId, slot.id);
 </script>
 
-<div class="input">
-    <IOAnchor id={ioid} type={data.type} direction={"input"} />
-    {data.label}
-    <!--
-    <div class="input-cont">
-        <input />
-    </div>  
-    -->
+<div class="input" class:multiple={slot.multiple}>
+    <SlotAnchor id={ioid} multiple={slot.multiple} kind={slot.kind} direction={"input"} />
+    {slot.label}
 </div>
 
 <style>   
@@ -26,24 +21,11 @@
         align-items: center;
         gap: 8px;
 
-        margin-left: -6px;
+        margin-left: -12px;
     }
 
-    /*
-    .input .input-cont {
-        padding-right: 8px;
-        flex-shrink: 1;
+    .input.multiple {
+        height: 44px;
     }
 
-    .input input {
-        border: none;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 4px;
-        background-color: var(--container);
-        border-radius: 4px;
-        font-size: 12px;
-    }
-    */
 </style>

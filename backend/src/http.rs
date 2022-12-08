@@ -19,7 +19,10 @@ use serde_derive::{Deserialize, Serialize};
 use tower_http::services::ServeDir;
 use tracing::{debug, error};
 
-use crate::{bus::BUS, device::Device};
+use crate::{
+    bus::BUS,
+    device::{Device, SOURCES},
+};
 
 pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
     let app = Router::new()
@@ -94,7 +97,26 @@ pub enum Update {
     Value((String, String, Result<serde_json::Value, String>)),
 }
 
-async fn handle_socket_err(socket: WebSocket) -> anyhow::Result<()> {
+async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
+    // Send current state down the pipe first
+    for device in Device::all()? {
+        let data = serde_json::to_string(&Response::Device(&device))?;
+        socket.send(Message::Text(data)).await?;
+    }
+
+    // Send the values we know about
+    for r in SOURCES.all() {
+        let key = r.key();
+
+        let data = serde_json::to_string(&Response::Value {
+            device: &key.0,
+            property: &key.1,
+            value: r.value(),
+        })?;
+
+        socket.send(Message::Text(data)).await?;
+    }
+
     let mut devices = BUS.device.add.subscribe().map(Update::Device);
     let mut values = BUS.device.value.subscribe().map(Update::Value);
 

@@ -8,7 +8,7 @@ use futures::{
     FutureExt,
 };
 use tokio::{sync::oneshot, task::JoinHandle};
-use tracing::debug;
+use tracing::{debug, error};
 
 type TaskFn<F> = fn(task: Task) -> F;
 type TaskFnArg<A, F> = fn(argument: A, task: Task) -> F;
@@ -127,7 +127,10 @@ impl Group {
         loop {
             tokio::select! {
                 Some((id, result)) = self.track.next() => {
-                    debug!("task exit {} with result {:?}", id, result);
+                    match result {
+                        Ok(_) => debug!("task exit {id}"),
+                        Err(e) => error!("task failed {id} with error {e:?}"),
+                    }
                 },
                 Ok(add) =  self.rx.recv_async() => {
                     debug!("task spawned {}", add.label);

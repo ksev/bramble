@@ -4,15 +4,15 @@
     import Output from './Output.svelte';
     import Input from './Input.svelte';
     import { get } from "svelte/store";
-    import colors from "$data/colors";
+    import colors, { Color } from "$data/colors";
+    import Icon from '$lib/Icon.svelte';
 
     export let data: NodeData;
 
     const { zoom, layout, blockPan } = automateContext();
     const rect = layout.get(data.id);
-    const singleIO = data.inputs.length === 0 || data.outputs.length === 0;
-    
-    let grabbing = false;
+
+    let grabbing = false; 
     let height = 0;
 
     let x = get(rect).origin.x;
@@ -43,14 +43,19 @@
 
 <div class="node" 
      bind:clientHeight|once={height} 
+     class:grabbing
      style="left: {$rect.origin.x}px; top: {$rect.origin.y}px; height: {$rect.size.height || 'auto'}; width: {$rect.size.width || 200}px;">
-    <h3 on:mousedown={mouseDown} 
+    <div on:mousedown={mouseDown} 
         style="background-color: {NodeColors[data.type].toString()}"
         draggable
-        class:grabbing>{data.label}</h3>
-    <div class="node-body" style="background-color: {colors.background.alpha(0.9)}" class:singleIO>           
+        class="title"
+        class:target={data.target}>
+        {data.label}
+        <Icon name={data.icon} color={"white"} size={14} />
+    </div>
+    <div class="node-body" style="background-color: {colors.background.alpha(0.9)}">           
         {#each data.outputs as output (output.id)}
-            <Output nodeId={data.id} data={output} />
+            <Output nodeId={data.id} slot={output} />
         {/each}
 
         {#if data.settings}
@@ -60,7 +65,7 @@
         {/if}
 
         {#each data.inputs as input (input.id)}
-            <Input nodeId={data.id} data={input} />
+            <Input nodeId={data.id} slot={input} />
         {/each}
     </div>
 </div>
@@ -71,9 +76,13 @@
         filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.7));
         display: flex;
         flex-direction: column;
+        z-index: 5;
     }
 
-    h3 {
+    .title {
+        display: flex;
+        justify-content: space-between;
+        text-shadow: 0 0 5px rgba(0,0,0,0.15);
         border-radius: 4px 4px 0 0;
         cursor: grab;
         color: var(--strong);        
@@ -84,8 +93,45 @@
         filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.2));
     }
 
-    h3.grabbing {
+    .title.target {
+        --color:rgba(255, 255, 255, 0.1);
+        background: linear-gradient(45deg, 
+            transparent 0%,
+            transparent 7.6923076923076925%,
+            var(--color) 7.6923076923076925%,
+            var(--color) 15.384615384615385%,
+            transparent 15.384615384615385%,
+            transparent 23.076923076923077%,
+            var(--color) 23.076923076923077%,
+            var(--color) 30.76923076923077%,
+            transparent 30.76923076923077%,
+            transparent 38.46153846153846%,
+            var(--color) 38.46153846153846%,
+            var(--color) 46.15384615384615%,
+            transparent 46.15384615384615%,
+            transparent 53.84615384615385%,
+            var(--color) 53.84615384615385%,
+            var(--color) 61.53846153846154%,
+            transparent 61.53846153846154%,
+            transparent 69.23076923076923%,
+            var(--color) 69.23076923076923%,
+            var(--color) 76.92307692307692%,
+            transparent 76.92307692307692%,
+            transparent 84.61538461538461%,
+            var(--color) 84.61538461538461%,
+            var(--color) 92.3076923076923%,
+            transparent 92.3076923076923%,
+            transparent 100%
+        ); 
+    }
+
+    .grabbing .title {
         cursor: grabbing;
+        
+    }
+
+    .node.grabbing {
+        z-index: 6;
     }
 
     .node-body {
@@ -97,10 +143,6 @@
         border-radius: 0 0 4px 4px;
         flex-grow: 1;
     }  
-
-    .node-body.singleIO {
-        justify-content: center;
-    }
 
     .settings {
         flex-grow: 1;

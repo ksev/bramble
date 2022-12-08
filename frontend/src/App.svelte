@@ -12,6 +12,8 @@
   import Colors from '$data/colors';
   import { socket } from '$net/pipe';
 
+  import '$data/state'; // Make sure we start collecting data
+
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
 </script>

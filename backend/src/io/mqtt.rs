@@ -71,6 +71,8 @@ pub async fn manage_connections(_: Task) -> Result<()> {
                         BUS.mqtt.published.publish((p.topic, p.payload));
                     }
                 }
+
+                println!("mqtt background died");
             });
 
             client

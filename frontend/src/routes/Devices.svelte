@@ -1,12 +1,17 @@
 <script lang="ts">
-    import {fade} from 'svelte/transition'
+    import { fade } from 'svelte/transition'
+    import { devices } from '$data/state';
 
     import Ledger from '$lib/Ledger.svelte';
     import Icon from '$lib/Icon.svelte';
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
+    import Device from '$lib/Device.svelte';
 
     import Colors from '$data/colors';
+
+    $: sorted = $devices.sort((a,b) => a.name.localeCompare(b.name));
+    $: empty = $devices.length === 0;
 </script>
 
 <div in:fade={{duration: 100}}>
@@ -31,15 +36,19 @@
         
         <Ledger>
             <div>
-                <Icon name="microchip" color={Colors.device} size={18} />
-                <span>Device</span>
+                <Icon name="stack-push" color={Colors.sink} size={22} />
+                <span>Input</span>
             </div>
             <div>
-                <Icon name="activity" color={Colors.feature} size={18} />
-                <span>Feature</span>
+                <Icon name="stack-pop" color={Colors.source} size={22} />
+                <span>Output</span>
             </div>
             <div>
-                <Icon name="share-alt" color={Colors.automation} size={18} />
+                <Icon name="stack" color={Colors.sourcesink} size={22} />
+                <span>Input &amp; Output</span>
+            </div>
+            <div>
+                <Icon name="settings-automation" color={Colors.automation} size={22} />
                 <span>Automation</span>
             </div>
         </Ledger>
@@ -48,11 +57,17 @@
     <Section color={Colors.device}>
         <span slot="headline">Devices</span>
 
-        <div class="empty" slot="content">
-            <span>
-                No <strong>Devices</strong> found<br/>
-                Add one in the menu above!
-            </span>
+        <div class="devices" class:empty slot="content">
+            {#if empty}
+                <span>
+                    No <strong>Devices</strong> found<br/>
+                    Add one in the menu above!
+                </span>
+            {:else}
+                {#each sorted as device (device.id)}
+                    <Device device={device} />
+                {/each}
+            {/if}
         </div>
     </Section>
 </div>
@@ -68,6 +83,13 @@
 
     .grow {
         flex-grow: 1;
+    }
+
+    .devices {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 3px;
     }
 
     .empty {

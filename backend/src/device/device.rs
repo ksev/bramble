@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::task::Task;
+use crate::{task::Task, db};
 
 use super::TaskSpec;
 
@@ -17,12 +17,9 @@ pub struct Device {
     /// This needs to be plain data so we can recreate the tasks on restart
     #[serde(default)]
     pub task_spec: Vec<TaskSpec>,
-    /// Which data can this device generate
+    /// All the values this Devices exposes or reads and handles
     #[serde(default)]
-    pub sources: Vec<ValueSpec>,
-    /// Which data can this device receive
-    #[serde(default)]
-    pub sinks: Vec<ValueSpec>,
+    pub features: Vec<ValueSpec>,
 }
 
 impl Device {
@@ -55,13 +52,31 @@ impl Device {
             }
         }
     }
+
+    /// Save the device to storage
+    pub fn save(&self) -> Result<()> {
+        let tree = db::tree("device")?;
+        tree.insert(&self.id, &self)?;
+
+        Ok(())
+    }
+
+    pub fn all() -> Result<impl Iterator<Item = Device>> {
+        let tree = db::tree("device")?;
+        Ok(tree.all::<Device>())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(tag="type")]
 pub enum ValueKind {
+    #[serde(rename = "bool")]
     Bool,
+    #[serde(rename = "number")]
     Number { unit: Option<String> },
-    State(Vec<String>),
+    #[serde(rename = "state")]
+    State { possible: Vec<String> },
+    #[serde(rename = "string")]
     String,
 }
 
@@ -74,7 +89,7 @@ impl ValueKind {
             (Value::Number(n), ValueKind::Number { .. }) => Ok(Value::Number(n.clone())),
             (Value::String(s), ValueKind::String) => Ok(Value::String(s.clone())),
 
-            (Value::String(s), ValueKind::State(possible)) => {
+            (Value::String(s), ValueKind::State { possible }) => {
                 if s.is_empty() {
                     // Treat empty strings a null, quite a few devices go back to an "empty", state 
                     Ok(Value::Null)
@@ -100,6 +115,27 @@ impl ValueKind {
 pub struct ValueSpec {
     pub id: String,
     pub name: String,
+    pub direction: ValueDirection,
     pub kind: ValueKind,
     pub meta: BTreeMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum ValueDirection {
+    #[serde(rename = "source")]
+    Source,
+    #[serde(rename = "sink")]
+    Sink,
+    #[serde(rename = "sourceSink")]
+    SourceSink
+}
+
+impl ValueDirection {
+    pub fn can_read(&self) -> bool {
+        match self {
+            ValueDirection::Source => true,
+            ValueDirection::Sink => false,
+            ValueDirection::SourceSink => true,
+        }
+    }
 }
