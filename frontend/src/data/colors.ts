@@ -11,9 +11,16 @@ export default {
     automation: Color("rgb(16, 148, 213)"),
     source: Color("#6cb6ff"),
     sink: Color("#ff6c6d"),
-    sourcesink: Color("#b46cff"),
+    sourceSink: Color("#b46cff"),
     transparent: Color('rgba(0,0,0,0)'),
     error: Color("rgb(244, 98, 98)"),
+    logic: Color("rgba(140, 108, 255, 0.8)"),
+
+    // Colors for the different value types
+    bool: Color("rgba(140, 108, 255, 0.8)"),
+    number: Color("#6cb6ff"),
+    state: Color("rgb(255, 156, 108)"),
+    string: Color("#ff6c6d"),
 }
 
 export { Color };

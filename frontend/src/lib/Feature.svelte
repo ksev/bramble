@@ -8,20 +8,17 @@
     export let spec: ValueSpec;
     export let deviceId: string;
 
-    let color: Color;
+    let color = Colors[spec.direction];
     let icon: string;
 
     switch (spec.direction) {
         case "sink": 
-            color = Colors["sink"];
             icon = "stack-push";
             break;
         case "source":
-            color = Colors["source"];
             icon = "stack-pop";
             break;
         case "sourceSink":
-            color = Colors["sourcesink"];
             icon = "stack";
             break;
     }
@@ -84,8 +81,8 @@
     }
 
     .name, .link, .item > :global(.value), .item > :global(.error) {
-        padding-left: 6px;   
-        padding-right: 6px;
+        padding-left: 9px;   
+        padding-right: 9px;
         
         display: flex;
         align-items: center;
@@ -110,7 +107,7 @@
     }
 
     .icon {
-        padding: 6px;
+        padding: 9px;
         display: flex;
         justify-content: center;
         align-items: center;

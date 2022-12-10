@@ -28,7 +28,12 @@
             <Icon name={$val.Ok ? 'toggle-right' : 'toggle-left' } size={20} />
         </div>
     {:else}
-        <div class="value">{$val.Ok} {unit}</div> 
+        <div class="value">
+            {$val.Ok}
+            {#if unit} 
+            <span>{unit}</span>
+            {/if}
+        </div> 
     {/if}
 {/if}
 
@@ -37,6 +42,8 @@
         border-radius: 2px;
         background-color: var(--container);
         white-space: nowrap;
+        display: flex;
+        gap: 2px;
     }
 
     .error {
@@ -51,5 +58,9 @@
     .error > div {
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    span {
+        color: rgba(255,255,255,0.3);
     }
 </style>

@@ -1,9 +1,10 @@
 <script lang="ts">
+  import colors from "$data/colors";
     import type { ValueKind } from "$data/device";
     import { Point } from "$data/geometry";
-  import { pop } from "$data/iterators";
-  import Icon from "$lib/Icon.svelte";
-    import { automateContext, completeConnection, type SlotRef } from './automate';
+    import { pop } from "$data/iterators";
+    import { automateContext } from "$data/automate/automate";
+    import { completeConnection, type SlotRef } from '$data/automate/node';
 
     export let id: SlotRef;
     export let kind: ValueKind;
@@ -16,6 +17,10 @@
 
     let anchor: HTMLDivElement;
     let canReceive: boolean = true;
+
+    const color = colors[kind.type];
+
+    const anchorPosition = anchors(id);
 
     function mouseDown() {
         blockPan.set(true);
@@ -81,7 +86,7 @@
             offset_y = 18;
         }
 
-        anchors(id).set(
+        anchorPosition.set(
             new Point(
                 $rect.origin.x + anchor.offsetLeft + offset_x,
                 $rect.origin.y + anchor.offsetTop + offset_y
@@ -90,10 +95,10 @@
     }
 
     $: if ($startedConnection) {
-        const cons = Array.from(connections.get(id));
+        const isConnected = pop(connections.get(id));
         const sameKind = $startedConnection.kind.type === kind.type;
         const oppositeDirection = $startedConnection.startDirection !== direction;
-        const notFull = direction === 'output' || (multiple || cons.length === 0);
+        const notFull = direction === 'output' || multiple || !isConnected;
         const notSameNode = $startedConnection.start.nodeId !== id.nodeId;
 
         canReceive = (
@@ -110,6 +115,14 @@
                 to: id,
                 kind,
             });
+
+            if (canReceive) {
+                canReceive = !connections.has({
+                    to: $startedConnection.start,
+                    from: id,
+                    kind,
+                });
+            }
         }
     } else {
         canReceive = true;
@@ -121,9 +134,11 @@
     on:mouseenter={mouseEnter}
     on:mouseleave={mouseLeave}
     on:mousedown={mouseDown}
-    on:mouseup={mouseUp}>
+    on:mouseup={mouseUp}
+    style="--kind-color: {color}"
+    >
     <div 
-        class="icon" 
+        class="anchor" 
         class:incompatible={!canReceive}
         class:construction={$startedConnection && $startedConnection.start.same(id)}
         bind:this={anchor}>
@@ -133,9 +148,9 @@
 
 <style>
     .sensor {
-        height: 24px;
-        width: 24px;
-        border-radius: 12px;
+        height: 30px;
+        width: 30px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -145,28 +160,28 @@
         height: 48px;
     }
  
-    .icon {
-        background-color: var(--device);
+    .anchor {
         width: 12px;
         height: 12px;
         min-width: 12px;
         min-height: 12px;
         border-radius: 6px;
+        background-color: var(--kind-color);
 
         border: 2px solid rgba(255,255,255,0.2); 
 
-        transition: 100ms linear box-shadow, 300ms linear filter, 500ms background-color, 500ms border;        
+        transition: 10ms linear box-shadow, 1s background-color;        
     }
 
-    .sensor:hover .icon:not(.incompatible), .icon.construction {
-        box-shadow: 0 0 3px rgba(0,0,0,0.2) inset;
+    .sensor:hover .anchor:not(.incompatible), .anchor.construction {
+        box-shadow: 0 0 3px rgba(0,0,0,0.5) inset;
     }
 
-    .sensor.multiple .icon {
+    .sensor.multiple .anchor {
         height: 36px;
     }
 
-    .icon.incompatible:not(.construction) {
+    .anchor.incompatible:not(.construction) {
         background-color: var(--icon);
     }
 </style>

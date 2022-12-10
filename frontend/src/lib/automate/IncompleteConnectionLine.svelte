@@ -1,15 +1,21 @@
 <script lang="ts">
-    import Colors from '$data/colors';
+    import colors from '$data/colors';
+    import { Color } from '$data/colors';
     import { get } from 'svelte/store';
-    import { automateContext, type IncompleteConnection } from './automate';
+    import { automateContext } from '$data/automate/automate';
+    import type { IncompleteConnection } from '$data/automate/node';
 
     const { anchors, pointer } = automateContext();
 
     export let data: IncompleteConnection;
+    
+    let color: Color;
 
     let d = "";
 
     $: if (data) {
+        color = colors[data.kind.type];
+
         if (data.startDirection === 'output') {
             // Giving up reactivity here does not matter
             const from = get(anchors(data.start));
@@ -32,11 +38,11 @@
 </script>
 
 <g>
-    <path d={d} stroke={Colors.device.toString()} />
+    <path d={d} stroke={color.alpha(0.85).toString()} />
 </g>
 
 <style>
     path { 
-        mix-blend-mode: multiply; 
+        mix-blend-mode: hard-light; 
     }
 </style>

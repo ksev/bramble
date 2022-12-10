@@ -58,8 +58,8 @@
     }
 
     .mini-view > :global(div) {
-        padding-left: 8px;
-        padding-right: 8px;
+        padding-left: 9px;
+        padding-right: 9px;
         display: flex;
         align-items: center;
     }
@@ -86,7 +86,7 @@
         display: flex; 
         gap: 6px; 
         background-color: var(--container); 
-        padding: 8px; 
+        padding: 9px; 
         flex-grow: 1;
         transition: background-color 200ms, width 2s;
         border-radius: 2px;

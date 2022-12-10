@@ -1,31 +1,27 @@
 <script lang="ts">
-    import Node from "$lib/automate/Node.svelte";
+    import NodeBox from "$lib/automate/NodeBox.svelte";
 
-    import { buildContext, SlotRef } from "$lib/automate/automate";
+    import { buildContext } from "$data/automate/automate";
     import Colors from "$data/colors";
-    import { Point } from "$data/geometry";
+    import { Extent, Point, Rect } from "$data/geometry";
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
-    import { derived, writable } from "svelte/store";
-  import { monotonic, take } from "$data/iterators";
+    import { derived, get, writable } from "svelte/store";
+    import { devices, devicesMap } from "$data/state";
+    import ContextMenu from "$lib/automate/ContextMenu.svelte";
+    import { filter, map } from "$data/iterators";
+  import { trace } from "$data/log";
 
-    const zoom = writable(1.0);
-    const pointer = writable<Point>(Point.ZERO);
+    export let params: {
+        deviceid: string,
+        property: string,
+    }
 
-    const {
-        blockPan,
-        startedConnection,
-        nodes,
-        connections,
-    } = buildContext(
-        derived(zoom, z => z), // Downstream consumers should just be able to read
-        derived(pointer, p => p), // Downstream consumers should just be able to read
-    );
-
-    const cons = connections.list;
+    let editor: HTMLDivElement;
+    let width = 0;
+    let height = 0;
 
     const axisSize = 6000;
-    let editor: HTMLDivElement;
 
     let x = 0;
     let y = 0;
@@ -33,14 +29,69 @@
     let panX = 0;
     let panY = 0;
 
-    let width = 0;
-    let height = 0;
+    let selectBox: string;
+    let selectBoxOrigin: Point;
 
     let spaceDown = false;
     let grabbed = false;
 
+    const device = devicesMap.get(params.deviceid);
+    const feature = device.features.find(f => f.id === params.property);
+
+    const zoom = writable(1.0);
+    const rawPointer = writable<Point>(Point.ZERO);
+
+    const viewPointer = derived(rawPointer, p => {
+        const box = editor?.getBoundingClientRect();
+        return box ? new Point(p.x - box.x, p.y - box.y) : Point.ZERO;
+    });
+
+    const pointer = derived(viewPointer, p => {
+        return new Point(
+            (p.x - (width / 2 + panX)) / $zoom + axisSize,
+            (p.y - (height / 2 + panY)) / $zoom + axisSize
+        );
+    });
+
+    const {
+        blockPan,
+        startedConnection,
+        contextMenu,
+        nodes,
+        selected,
+        connections,
+    } = buildContext(
+        [{
+            id: 0,
+            label: device.name,
+            color: Colors[feature.direction],
+            icon: "settings-automation",
+            target: true,
+            inputs: [{
+                id: feature.id,
+                label: `${feature.name}`,
+                kind: feature.kind,
+            }],
+            outputs: [],
+        }],
+        [{
+            id: 0,
+            rect: Rect.numbers(
+                6000-100, 
+                6000-40, 
+                200, 
+                200
+            ),
+        }],
+        derived(zoom, z => z), // Downstream consumers should just be able to read
+        viewPointer, // Downstream consumers should just be able to read
+        pointer,
+    );
+
+    const cons = connections.list;
+
     function wheel(e: WheelEvent) {
-        const sens = 0.002,
+        const sens = 0.001,
         max = 3.0,
         min = (Math.min(width, height) / axisSize) * 1.5;
 
@@ -48,39 +99,87 @@
     }
 
     function keyDown(e: KeyboardEvent) {
+        // If the event originates from an input, ignore it
+        if ((e.target as HTMLElement)?.nodeName === 'INPUT') return;
         if (e.key === " " && !$blockPan) spaceDown = true;
     }
 
     function keyUp(e: KeyboardEvent) {
+        // If the event originates from an input, ignore it
+        if ((e.target as HTMLElement)?.nodeName === 'INPUT') return;
+
         if (e.key == " ") spaceDown = false;
+
+        switch (e.key) {
+            case ' ':
+                spaceDown = false;
+                break;
+            case "Backspace":
+            case "Delete":
+                const keys = Array.from($selected.keys());
+                selected.deselectAll();
+
+                for (const nodeId of keys) {
+                    nodes.remove(nodeId);
+                }
+                break;
+        }
     }
 
-    function mouseDown() {
-        if (!spaceDown) return;
-        grabbed = true;
+    function mouseDown(e: MouseEvent) {
+        if (spaceDown) {
+            grabbed = true
+        } else {
+            selectBoxOrigin = $viewPointer;
+            blockPan.set(true);
+        }
+    }
+
+    function onContextMenu(e: MouseEvent) {
+        e.preventDefault();
+        $contextMenu = $viewPointer;
+        return false;
     }
 
     function mouseUp() {
         grabbed = false;
         blockPan.set(false);
         startedConnection.set(null);
+
+        selectBox = selectBoxOrigin = null;
+    }
+
+    function deselect() {
+        if (selectBox) return;
+        selected.deselectAll();
     }
 
     function mouseMove(e: MouseEvent) {
-        const box = editor.getBoundingClientRect();
-
         // Make the current mouse editor local mouse position availiable to all children
-        pointer.set(
-            new Point(
-                (e.clientX - box.x - (width / 2 + panX)) / $zoom + axisSize,
-                (e.clientY - box.y - (height / 2 + panY)) / $zoom + axisSize
-            )
-        );
+        rawPointer.set(new Point(e.clientX, e.clientY));
 
-        if (!grabbed) return;
+        if (selectBoxOrigin) {
+            const box = Rect.corners(selectBoxOrigin, $viewPointer);
 
-        x += e.movementX;
-        y += e.movementY;
+            selectBox = `
+                top: ${box.origin.y}px;
+                left: ${box.origin.x}px;
+                width: ${box.size.width}px;
+                height: ${box.size.height}px;
+            `;
+
+            selected.boxSelect(box.moveTo(
+                new Point(
+                    (box.origin.x - (width / 2 + panX)) / $zoom + axisSize,
+                    (box.origin.y - (height / 2 + panY)) / $zoom + axisSize
+                )
+            ));
+        }
+
+        if (grabbed) {
+            x += e.movementX;
+            y += e.movementY;
+        };
     }
 
     $: {
@@ -115,15 +214,25 @@
      bind:this={editor}
      on:mousedown={mouseDown}
      on:mouseup={mouseUp}
+     on:contextmenu={onContextMenu}
      on:wheel|passive={wheel}
      class:grabbed
      class:grabenabled={spaceDown}>
-    <div class="grid"style={transform}>
+
+    {#if $contextMenu}
+        <ContextMenu />
+    {/if}
+
+    {#if selectBox} 
+        <div class="selectbox" style={selectBox}></div>
+    {/if}
+
+    <div class="grid" style={transform}>
         {#each $nodes as node (node.id)}
-            <Node data={node} />
+            <NodeBox data={node} />
         {/each}
 
-        <svg viewBox="0 0 12000 12000" class="edges">
+        <svg viewBox="0 0 12000 12000" class="edges" on:mouseup|self={deselect}>
             <g>
                 <rect x="5993" y="5993"
                       width="14" height="14"
@@ -136,7 +245,7 @@
                fill="transparent"
                style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">
                 {#each $cons as c (`${c.from.toString()}->${c.to.toString()}`)}
-                    <ConnectionLine connection={c} color={Colors.device} />
+                    <ConnectionLine connection={c} />
                 {/each}
 
                 {#if $startedConnection}
@@ -191,5 +300,12 @@
     .edges {
         width: 12000px;
         height: 12000px;
+    }
+
+    .selectbox {
+        background-color: rgba(0,0,0,0.05);
+        position: absolute;
+        border: 3px dashed var(--background);
+        z-index: 50;
     }
 </style>

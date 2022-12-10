@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use itertools::Itertools;
 use serde_derive::Deserialize;
 use tracing::error;
 
@@ -37,12 +38,15 @@ pub struct Device {
 impl Device {
     pub fn into_device(self, server: MqttServerInfo) -> Option<crate::device::Device> {
         let def = self.definition?;
-
         let topic = format!("zigbee2mqtt/{}", self.friendly_name);
-
         let subscribe = MqttSubscribe { server, topic };
 
-        let features = def.to_value_specs();
+        // Filter out duplicate properties
+        let features = def
+            .to_value_specs()
+            .into_iter()
+            .unique_by(|f| f.id.clone())
+            .collect();
 
         let out = crate::device::Device {
             id: self.ieee_address,
@@ -88,7 +92,7 @@ impl Definition {
                     };
 
                     out.push(ValueSpec {
-                        name: name.clone(),
+                        name: clean_up_name(name),
                         id: property.clone(),
                         kind: ValueKind::Bool,
                         direction,
@@ -115,7 +119,7 @@ impl Definition {
                     };
 
                     out.push(ValueSpec {
-                        name: name.clone(),
+                        name: clean_up_name(name),
                         id: property.clone(),
                         direction,
                         kind: ValueKind::Number { unit: unit.clone() },
@@ -138,7 +142,7 @@ impl Definition {
                     };
 
                     out.push(ValueSpec {
-                        name: name.clone(),
+                        name: clean_up_name(name),
                         id: property.clone(),
                         direction,
                         kind: ValueKind::State {
@@ -162,7 +166,7 @@ impl Definition {
                     };
 
                     out.push(ValueSpec {
-                        name: name.clone(),
+                        name: clean_up_name(name),
                         id: property.clone(),
                         direction,
                         kind: ValueKind::String,
@@ -185,7 +189,7 @@ impl Definition {
                     };
 
                     out.push(ValueSpec {
-                        name: name.clone(),
+                        name: clean_up_name(name),
                         id: property.clone(),
                         direction,
                         kind: ValueKind::Number { unit: None },
@@ -317,8 +321,32 @@ pub enum Feature {
     Climate { features: Vec<Feature> },
 }
 
+fn clean_up_name(name: &str) -> String {
+    let replaced = name.replace("_", " ");
+    let mut iter = replaced.chars();
+
+    let Some(first) = iter.next() else {
+        return "".into();
+    };
+
+    first.to_uppercase().chain(iter).collect()
+}
+
 #[cfg(test)]
 mod test {
+    #[test]
+    fn clean_up_name() {
+        let test1 = super::clean_up_name("requested_brightness_percent");
+        let test2 = super::clean_up_name("battery");
+        let test3 = super::clean_up_name("");
+        let test4 = super::clean_up_name("a");
+
+        assert_eq!(test1, "Requested brightness percent");
+        assert_eq!(test2, "Battery");
+        assert_eq!(test3, "");
+        assert_eq!(test4, "A");
+    }
+
     #[test]
     fn test_access() {
         let publish = super::Access(0b001);

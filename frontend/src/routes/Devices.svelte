@@ -44,7 +44,7 @@
                 <span>Output</span>
             </div>
             <div>
-                <Icon name="stack" color={Colors.sourcesink} size={22} />
+                <Icon name="stack" color={Colors.sourceSink} size={22} />
                 <span>Input &amp; Output</span>
             </div>
             <div>
@@ -89,7 +89,7 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-        margin-top: 3px;
+        margin-top: 6px;
     }
 
     .empty {

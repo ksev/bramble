@@ -1,59 +1,75 @@
 <script lang="ts">
-    import { automateContext, type NodeData, NodeColors } from './automate';
+    import { automateContext, type SelectionMove } from '$data/automate/automate';
+    import type { Node } from '$data/automate/node';
 
     import Output from './Output.svelte';
     import Input from './Input.svelte';
-    import { get } from "svelte/store";
-    import colors, { Color } from "$data/colors";
+    import colors from "$data/colors";
     import Icon from '$lib/Icon.svelte';
+  
+    export let data: Node;
 
-    export let data: NodeData;
-
-    const { zoom, layout, blockPan } = automateContext();
+    const { layout, selected, pointer, blockPan } = automateContext();
     const rect = layout.get(data.id);
 
-    let grabbing = false; 
+    let moving: SelectionMove; 
     let height = 0;
-
-    let x = get(rect).origin.x;
-    let y = get(rect).origin.y;
+    let width = 0;
 
     function mouseDown() {
-        grabbing = true;
-        blockPan.set(true);
+        if (!isSelected) {
+            selected.selectOne(data);
+        }
+
+        moving = selected.startMove($pointer);
+        $blockPan = true;
     }
 
     function mouseUp() {
-        grabbing = false;
-        blockPan.set(false);
+        if (moving && !moving.hasMoved()) {
+            // We didn't move just clicked, narrow selection to this Node
+            selected.selectOne(data);
+        }
+
+        moving = null;
+        $blockPan = false;
     }
 
-    function mouseMove(e: MouseEvent){
-        if (!grabbing) return;
-        
-        x += e.movementX / $zoom;
-        y += e.movementY / $zoom;
+    function mouseMove(){
+        if (!moving) return;
+        moving.move($pointer);
     }
 
-    $: rect.resize(200, height); 
-    $: rect.move(x, y);
+    $: rect.resize(width, height); 
+
+    $: nodeStyle = `
+        left: ${$rect.origin.x}px; 
+        top: ${$rect.origin.y}px; 
+        width: ${$rect.size.width || 'auto'}px;
+        --accent: ${data.color.alpha(1.0)};
+        --body-background: ${colors.background.alpha(0.9)};
+    `
+
+    $: isSelected = $selected.has(data.id);
 </script>
 
 <svelte:window on:mousemove|passive={mouseMove} on:mouseup={mouseUp} />
 
 <div class="node" 
      bind:clientHeight|once={height} 
-     class:grabbing
-     style="left: {$rect.origin.x}px; top: {$rect.origin.y}px; height: {$rect.size.height || 'auto'}; width: {$rect.size.width || 200}px;">
+     bind:clientWidth|once={width}
+     on:mousedown={e => e.stopPropagation()}
+     class:moving
+     class:isSelected
+     style={nodeStyle}>
     <div on:mousedown={mouseDown} 
-        style="background-color: {NodeColors[data.type].toString()}"
         draggable
         class="title"
         class:target={data.target}>
         {data.label}
-        <Icon name={data.icon} color={"white"} size={14} />
+        <Icon name={data.icon} color={"white"} size={20} />
     </div>
-    <div class="node-body" style="background-color: {colors.background.alpha(0.9)}">           
+    <div class="node-body">           
         {#each data.outputs as output (output.id)}
             <Output nodeId={data.id} slot={output} />
         {/each}
@@ -77,20 +93,28 @@
         display: flex;
         flex-direction: column;
         z-index: 5;
+        min-width: 200px;
+        background-color: var(--body-background);
+        transition: 100ms filter;
+        border-radius: 4px; 
     }
 
     .title {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         text-shadow: 0 0 5px rgba(0,0,0,0.15);
-        border-radius: 4px 4px 0 0;
         cursor: grab;
-        color: var(--strong);        
-        padding: 8px;
-        font-size: 12px;
+        color: var(--strong);   
+        border-radius: 4px 4px 0 0;     
+        padding: 6px;
+        font-size: 14px;
         font-weight: normal;
         cursor: grab;
         filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.2));
+        height: 28px;
+
+        background-color: var(--accent);
     }
 
     .title.target {
@@ -122,29 +146,31 @@
             var(--color) 92.3076923076923%,
             transparent 92.3076923076923%,
             transparent 100%
-        ); 
+        ) var(--accent); 
     }
 
-    .grabbing .title {
+    .moving .title {
         cursor: grabbing;
-        
     }
 
-    .node.grabbing {
-        z-index: 6;
+    .node.isSelected {
+        filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.7)) 
+                drop-shadow(0px 0px 2px var(--accent));
     }
 
     .node-body {
-        opacity: 0.9;
         display: flex;
-        padding: 8px 0;
-        gap: 8px;
+        padding: 12px 0;
+        justify-content: center;
+        gap: 9px;
         flex-direction: column;
-        border-radius: 0 0 4px 4px;
+        border-radius: 0 0 4px 4px; 
+        
         flex-grow: 1;
     }  
 
     .settings {
         flex-grow: 1;
+        padding: 6px 12px;
     }   
 </style>

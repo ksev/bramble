@@ -30,7 +30,7 @@ pub async fn zigbee2mqtt_update(server: MqttServerInfo, _: Task) -> Result<()> {
         if topic == "zigbee2mqtt/bridge/devices" {
             let reader = data.reader();
 
-            let device_spec: Vec<crate::integration::zigbee2mqtt::Device> =
+            let device_spec: Vec<Device> =
                 serde_json::de::from_reader(reader)?;
 
             let iter = device_spec

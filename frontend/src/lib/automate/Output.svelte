@@ -1,15 +1,16 @@
 <script lang="ts">
-    import { SlotRef, type Slot } from "./automate";
+    import { type Slot, SlotRef } from "$data/automate/node";
     import SlotAnchor from "./SlotAnchor.svelte";
+    import SlotLabel from "./SlotLabel.svelte";
 
-    export let nodeId: string;
+    export let nodeId: number;
     export let slot: Slot;
 
     const ioid = new SlotRef(nodeId, slot.id);
 </script>
 
 <div class="output">
-    {slot.label}
+    <div class="label"><SlotLabel slot={slot} /></div>
     <SlotAnchor id={ioid} kind={slot.kind} direction={"output"} />
 </div>
 
@@ -19,8 +20,14 @@
         display: flex;
         justify-content: right;
         align-items: center;
-        gap: 8px;
 
-        margin-right: -12px;
+        margin-right: -15px; 
+        padding-left: 12px;
     }    
+    .label {
+        margin-right: -3px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
 </style>

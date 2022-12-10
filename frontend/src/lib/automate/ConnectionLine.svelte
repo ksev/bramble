@@ -1,15 +1,15 @@
 <script lang="ts">
-    import type Color from "color";
-    import { automateContext, type Connection } from "./automate";
+    import colors from "$data/colors";
+    import { automateContext } from "$data/automate/automate";
+    import type { Connection } from "$data/automate/node";
 
-    export let color: Color;
     export let connection: Connection;
    
-    let { to, from } = connection;
     const { anchors, connections } = automateContext();
 
-    const first = anchors(from);
-    const last = anchors(to);
+    const color = colors[connection.kind.type];
+    const first = anchors(connection.from);
+    const last = anchors(connection.to);
 
     let d = "";
 
@@ -18,13 +18,15 @@
     }
     
     $: {      
+        let sqdist = $first.distanceSquared($last);
+
         let distance = Math.abs($first.x - $last.x);               
         let offset = Math.max(
-            60,
-            (distance / 2) + 60
+            30,
+            (distance / 2) + 30
         );
 
-        d = distance < 60 ?
+        d = sqdist < 3000 ?
             `M${$first.x},${$first.y}L${$last.x},${$last.y}` :
             `M${$first.x},${$first.y}C${$first.x+offset},${$first.y},${$last.x-offset},${$last.y},${$last.x},${$last.y}`;
     }
@@ -34,6 +36,6 @@
 
 <style>
     path { 
-        mix-blend-mode: multiply; 
+        mix-blend-mode: hard-light; 
     }
 </style>
