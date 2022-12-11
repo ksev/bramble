@@ -2,25 +2,18 @@
     import colors from "$data/colors";
     import { automateContext } from "$data/automate/automate";
     import type { Connection } from "$data/automate/node";
-     import type { Readable } from "svelte/store";
 
     export let connection: Connection;
    
     const { anchors, connections, nodes } = automateContext();
 
-    const inputSlot = nodes.get(connection.to.nodeId)
-        .inputs.find(s => s.id === connection.to.name);
+    const inputSlot = nodes.getSlot(connection.to);
+    const outputSlot = nodes.getSlot(connection.from);
 
-    const color = colors[inputSlot.kind.type];
+    const color = colors[outputSlot.kind.type];
     const first = anchors(connection.from);
     const last = anchors(connection.to);
     let offsetY = 0;
-
-    let count: Readable<number>;
-
-    if (inputSlot.multiple) {
-        count = connections.connectionNumber(connection);
-    }
 
     let d = "";
 
@@ -28,14 +21,15 @@
         connections.remove(connection);
     }
 
-    $: if (count) {
-        // Spread out the connection on multi inputs
-        let n = $count % 7;
-        let neg = n % 2 === 0;
-        offsetY = neg ? n * 2 : n * -2;
-    }
-    
     $: {      
+        if (inputSlot.multiple) {
+            let distanceY = $first.y - $last.y;
+            let clamped = Math.min(300, Math.max(-300, distanceY));
+            const p = (clamped - -300) / (300 - -300);
+
+            offsetY = p * 18 - 9;
+        }
+
         let sqdist = $first.distanceSquared($last);
 
         let distance = Math.abs($first.x - $last.x);               

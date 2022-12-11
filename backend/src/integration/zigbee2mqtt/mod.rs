@@ -10,6 +10,7 @@ use bytes::Buf;
 pub use device::*;
 use futures::StreamExt;
 use serde_json::Value;
+use tracing::error;
 
 use crate::{
     bus::BUS,
@@ -63,7 +64,13 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
         }
 
         let rdr = data.reader();
-        let json: serde_json::Value = serde_json::de::from_reader(rdr)?;
+        let json: serde_json::Value = match serde_json::de::from_reader(rdr) {
+            Ok(json) => json,
+            Err(e) => {
+                error!("Error parsing value json for {}\n{e:?}", device.name);
+                continue;
+            }
+        };
 
         for spec in device.features.iter().filter(|f| f.direction.can_read()) {
             let ptr = &format!("/{}", spec.id);
@@ -77,7 +84,8 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
             };
 
             // Rewrite Zigbee2Mqtt Binary to a boolean before we validate
-            if spec.kind == crate::device::ValueKind::Bool {
+            // if the base value is not already a boolean
+            if spec.kind == crate::device::ValueKind::Bool && !value.is_boolean() {
                 let Some(on) = spec.meta.get("value_on") else {
                     let v = Err("meta value 'value_on' required for binary device".into());
                     SOURCES.set(key, v);

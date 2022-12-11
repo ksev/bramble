@@ -46,6 +46,8 @@ export function* exponential(start: number, max: number = Number.MAX_SAFE_INTEGE
  * @param callback Function to transform the value in the iterator
  */
 export function* map<T, O>(it: Iterable<T>, callback: (data: T, index?: number) => O) {
+    if (!it) return;
+
     let index = 0;
 
     for (const v of it) {
@@ -60,6 +62,8 @@ export function* map<T, O>(it: Iterable<T>, callback: (data: T, index?: number) 
  * @param callback Function to transform the value in the iterator
  */
 export function* flatMap<T, O>(it: Iterable<T>, callback: (data: T, index?: number) => Iterable<O>) {
+    if (!it) return;
+
     let index = 0;
 
     for (const v of it) {
@@ -94,6 +98,8 @@ export function* take<T>(it: Iterator<T>, n: number) {
  * @returns The value or undefined if the Iterator was empty
  */
 export function pop<T>(it: Iterator<T>): T | undefined {
+    if (!it) return undefined;
+
     const n = it.next();
 
     if (n.done === true) {

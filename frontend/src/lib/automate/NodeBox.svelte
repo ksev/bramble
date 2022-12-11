@@ -25,7 +25,7 @@
         moving = selected.startMove($pointer);
         $blockPan = true;
     }
-
+    
     function mouseUp() {
         $blockPan = false;
 
@@ -83,7 +83,7 @@
 
         {#if data.settings}
             <div class="settings">
-                <svelte:component this={data.settings} />
+                <svelte:component this={data.settings.component} {...data.settings.props} />
             </div>
         {/if}
 

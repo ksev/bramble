@@ -1,15 +1,24 @@
 <script lang="ts">
     import { automateContext } from "$data/automate/automate";
     import { type Slot, SlotRef } from "$data/automate/node";
+    import type { Readable } from "svelte/store";
     import SlotAnchor from "./SlotAnchor.svelte";
     import SlotLabel from "./SlotLabel.svelte";
 
     export let nodeId: number;
     export let slot: Slot;
 
+    const { connections } = automateContext();
+
     const id = new SlotRef(nodeId, slot.id);
 
-    let showDefault = slot.default !== undefined;
+    let hasDefault = slot.default !== undefined;
+    let showDefault = hasDefault;
+    let connectedTo = connections.remote(id);
+
+    $: if (hasDefault) {
+        showDefault = !$connectedTo;
+    }
 </script>
 
 <div class="input" class:multiple={slot.multiple}>
@@ -21,7 +30,7 @@
             <input id="default" value={slot.default} size="10" />
         </div>
     {:else}
-        <div class="label"><SlotLabel slot={slot} /></div>
+        <div class="label"><SlotLabel slot={slot} adaptKind={$connectedTo} /></div>
     {/if}
 </div>
 

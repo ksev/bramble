@@ -81,3 +81,7 @@ select {
     font-family: 'Roboto', sans-serif;
     color: #cfd2dd;
 }
+
+select:disabled {
+    color: #cfd2dd6e;
+}

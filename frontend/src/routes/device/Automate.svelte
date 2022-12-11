@@ -9,8 +9,6 @@
     import { derived, get, writable } from "svelte/store";
     import { devices, devicesMap } from "$data/state";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
-    import { filter, map } from "$data/iterators";
-  import { trace } from "$data/log";
 
     export let params: {
         deviceid: string,
@@ -93,7 +91,7 @@
         max = 3.0,
         min = (Math.min(width, height) / axisSize) * 1.5;
 
-        zoom = Math.max(min, Math.min(max, zoom - e.deltaY * sens));
+        zoom = Math.max(min, Math.min(max, zoom - e.deltaY * sens)) ;
     }
 
     function keyDown(e: KeyboardEvent) {
@@ -166,11 +164,15 @@
                 height: ${box.size.height}px;
             `;
 
-            selected.boxSelect(box.moveTo(
+            selected.boxSelect(new Rect(
                 new Point(
                     (box.origin.x - (width / 2 + panX)) / zoom + axisSize,
                     (box.origin.y - (height / 2 + panY)) / zoom + axisSize
-                )
+                ),
+                new Extent(
+                    box.size.width / zoom,
+                    box.size.height / zoom,
+                ),
             ));
         }
 

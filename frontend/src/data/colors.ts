@@ -14,13 +14,13 @@ export default {
     sourceSink: Color("#b46cff"),
     transparent: Color('rgba(0,0,0,0)'),
     error: Color("rgb(244, 98, 98)"),
-    logic: Color("rgba(140, 108, 255, 0.8)"),
 
     // Colors for the different value types
-    bool: Color("rgba(140, 108, 255, 0.8)"),
-    number: Color("#6cb6ff"),
+    bool: Color("rgb(140, 108, 255)"),
+    number: Color("#46a2ce"),
     state: Color("rgb(255, 156, 108)"),
     string: Color("#ff6c6d"),
+    any: Color("rgb(140, 108, 255)").mix(Color("#46a2ce"), 0.5).mix(Color("rgb(255, 156, 108)"), 0.5).mix(Color("#ff6c6d"), 0.5),
 }
 
 export { Color };

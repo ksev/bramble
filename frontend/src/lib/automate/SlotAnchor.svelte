@@ -18,8 +18,6 @@
     let self: HTMLDivElement;
     let canReceive: boolean = true;
 
-    const color = colors[kind.type];
-
     const anchor = anchors(id);
 
     function mouseDown() {
@@ -52,8 +50,9 @@
     }
 
     function mouseUp() {
-        if (!canReceive && $startedConnection) return;
-        connections.add(completeConnection($startedConnection, id));
+        if ($startedConnection?.over === id) {
+            connections.add(completeConnection($startedConnection, id));
+        }
     }
 
     function mouseEnter() {
@@ -78,6 +77,10 @@
         });
     }
 
+    $: color = kind.type === 'any' ? 
+        'linear-gradient(328deg, rgba(140,108,255,1) 10%, rgba(255,108,109,1) 90%)' : 
+        colors[kind.type].toString();
+
     // Update this slots anchor
     $: if (self) {
         let offset_x = 6;
@@ -97,7 +100,7 @@
 
     $: if ($startedConnection) {
         canReceive = (
-            ($startedConnection.kind.type === kind.type) && // Same kind
+            ($startedConnection.kind.type === kind.type || $startedConnection.kind.type === 'any' || kind.type === 'any') && // Same kind
             ($startedConnection.start.nodeId !== id.nodeId) && // Not on the same node
             ($startedConnection.startDirection !== direction) && // Opposite directions
             (direction === 'output' || multiple || !pop(connections.get(id))) // Not full
@@ -149,15 +152,18 @@
         min-width: 12px;
         min-height: 12px;
         border-radius: 6px;
-        background-color: var(--kind-color);
+        background: var(--kind-color);
 
-        border: 2px solid rgba(255,255,255,0.2); 
-
-        transition: 10ms linear box-shadow, 1s background-color;        
+        box-shadow: inset 0 0 1px 2px rgba(255, 255, 255, 0.45); 
+        
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center ;
     }
 
     .sensor:hover .anchor:not(.incompatible), .anchor.construction {
-        box-shadow: 0 0 3px rgba(0,0,0,0.5) inset;
+        box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.8); 
     }
 
     .sensor.multiple .anchor {
@@ -166,5 +172,5 @@
 
     .anchor.incompatible:not(.construction) {
         background-color: var(--icon);
-    }
+    } 
 </style>

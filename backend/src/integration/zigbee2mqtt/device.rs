@@ -14,6 +14,7 @@ pub enum DeviceType {
     Router,
     EndDevice,
     Coordinator,
+    Unknown,
 }
 
 #[derive(Deserialize, Debug)]

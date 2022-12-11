@@ -64,9 +64,11 @@ async fn ws_handler(
 }
 
 async fn handle_socket(socket: WebSocket) {
-    match handle_socket_err(socket).await {
-        Ok(_) => {}
-        Err(e) => error!("{}", e),
+    if let Err(e) = handle_socket_err(socket).await {
+        let err = e.to_string();
+        if err != "Connection closed normally" {
+            error!("{}", err);
+        }
     }
 }
 
