@@ -26,6 +26,8 @@
     let x = 0;
     let y = 0;
 
+    let zoom = 1.0;
+
     let panX = 0;
     let panY = 0;
 
@@ -38,7 +40,6 @@
     const device = devicesMap.get(params.deviceid);
     const feature = device.features.find(f => f.id === params.property);
 
-    const zoom = writable(1.0);
     const rawPointer = writable<Point>(Point.ZERO);
 
     const viewPointer = derived(rawPointer, p => {
@@ -48,8 +49,8 @@
 
     const pointer = derived(viewPointer, p => {
         return new Point(
-            (p.x - (width / 2 + panX)) / $zoom + axisSize,
-            (p.y - (height / 2 + panY)) / $zoom + axisSize
+            (p.x - (width / 2 + panX)) / zoom + axisSize,
+            (p.y - (height / 2 + panY)) / zoom + axisSize
         );
     });
 
@@ -77,25 +78,22 @@
         [{
             id: 0,
             rect: Rect.numbers(
-                6000-100, 
-                6000-40, 
+                axisSize-100, 
+                axisSize-40, 
                 200, 
                 200
             ),
-        }],
-        derived(zoom, z => z), // Downstream consumers should just be able to read
+        }],// Downstream consumers should just be able to read
         viewPointer, // Downstream consumers should just be able to read
         pointer,
     );
-
-    const cons = connections.list;
 
     function wheel(e: WheelEvent) {
         const sens = 0.001,
         max = 3.0,
         min = (Math.min(width, height) / axisSize) * 1.5;
 
-        zoom.update((zoom) => Math.max(min, Math.min(max, zoom - e.deltaY * sens)));
+        zoom = Math.max(min, Math.min(max, zoom - e.deltaY * sens));
     }
 
     function keyDown(e: KeyboardEvent) {
@@ -170,8 +168,8 @@
 
             selected.boxSelect(box.moveTo(
                 new Point(
-                    (box.origin.x - (width / 2 + panX)) / $zoom + axisSize,
-                    (box.origin.y - (height / 2 + panY)) / $zoom + axisSize
+                    (box.origin.x - (width / 2 + panX)) / zoom + axisSize,
+                    (box.origin.y - (height / 2 + panY)) / zoom + axisSize
                 )
             ));
         }
@@ -183,7 +181,7 @@
     }
 
     $: {
-        let realAxisSize = axisSize * $zoom;
+        let realAxisSize = axisSize * zoom;
         let hwidth = width / 2;
         let hheight = height / 2;
 
@@ -199,13 +197,14 @@
         transform: 
             translate(${panX}px, ${panY}px) 
             translate(calc(-50% + ${width / 2}px), calc(-50% + ${height / 2}px)) 
-            scale(${$zoom});
+            scale(${zoom});
     `;
 </script>
 
 <svelte:window 
     on:keydown={keyDown} 
     on:keyup={keyUp} 
+    on:mouseup={mouseUp}
     on:mousemove={mouseMove} />
 
 <div class="node-editor"
@@ -213,7 +212,6 @@
      bind:clientHeight={height}
      bind:this={editor}
      on:mousedown={mouseDown}
-     on:mouseup={mouseUp}
      on:contextmenu={onContextMenu}
      on:wheel|passive={wheel}
      class:grabbed
@@ -244,7 +242,7 @@
                stroke-linejoin="round"
                fill="transparent"
                style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">
-                {#each $cons as c (`${c.from.toString()}->${c.to.toString()}`)}
+                {#each $connections as c (`${c.from.toString()}->${c.to.toString()}`)}
                     <ConnectionLine connection={c} />
                 {/each}
 

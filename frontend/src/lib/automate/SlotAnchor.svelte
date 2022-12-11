@@ -1,5 +1,5 @@
 <script lang="ts">
-  import colors from "$data/colors";
+    import colors from "$data/colors";
     import type { ValueKind } from "$data/device";
     import { Point } from "$data/geometry";
     import { pop } from "$data/iterators";
@@ -13,14 +13,14 @@
 
     const { layout, anchors, blockPan, startedConnection, connections } = automateContext();
 
-    const rect = layout.get(id.nodeId);
+    const nodeRect = layout.get(id.nodeId);
 
-    let anchor: HTMLDivElement;
+    let self: HTMLDivElement;
     let canReceive: boolean = true;
 
     const color = colors[kind.type];
 
-    const anchorPosition = anchors(id);
+    const anchor = anchors(id);
 
     function mouseDown() {
         blockPan.set(true);
@@ -78,7 +78,8 @@
         });
     }
 
-    $: if (anchor) {
+    // Update this slots anchor
+    $: if (self) {
         let offset_x = 6;
         let offset_y = 6;
 
@@ -86,43 +87,25 @@
             offset_y = 18;
         }
 
-        anchorPosition.set(
+        anchor.set(
             new Point(
-                $rect.origin.x + anchor.offsetLeft + offset_x,
-                $rect.origin.y + anchor.offsetTop + offset_y
+                $nodeRect.origin.x + self.offsetLeft + offset_x,
+                $nodeRect.origin.y + self.offsetTop + offset_y
             )
         );
     }
 
     $: if ($startedConnection) {
-        const isConnected = pop(connections.get(id));
-        const sameKind = $startedConnection.kind.type === kind.type;
-        const oppositeDirection = $startedConnection.startDirection !== direction;
-        const notFull = direction === 'output' || multiple || !isConnected;
-        const notSameNode = $startedConnection.start.nodeId !== id.nodeId;
-
         canReceive = (
-            sameKind &&
-            oppositeDirection &&
-            notFull &&
-            notSameNode
+            ($startedConnection.kind.type === kind.type) && // Same kind
+            ($startedConnection.start.nodeId !== id.nodeId) && // Not on the same node
+            ($startedConnection.startDirection !== direction) && // Opposite directions
+            (direction === 'output' || multiple || !pop(connections.get(id))) // Not full
         );
 
         if (canReceive) {
             // We have made the easy tests, now check for uniqueness
-            canReceive = !connections.has({
-                from: $startedConnection.start,
-                to: id,
-                kind,
-            });
-
-            if (canReceive) {
-                canReceive = !connections.has({
-                    to: $startedConnection.start,
-                    from: id,
-                    kind,
-                });
-            }
+            canReceive = !connections.connected($startedConnection.start, id);
         }
     } else {
         canReceive = true;
@@ -141,7 +124,7 @@
         class="anchor" 
         class:incompatible={!canReceive}
         class:construction={$startedConnection && $startedConnection.start.same(id)}
-        bind:this={anchor}>
+        bind:this={self}>
     </div>
 </div>
 

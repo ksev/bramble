@@ -12,6 +12,7 @@
     const { layout, selected, pointer, blockPan } = automateContext();
     const rect = layout.get(data.id);
 
+    let selectedCount = selected.count;
     let moving: SelectionMove; 
     let height = 0;
     let width = 0;
@@ -26,13 +27,19 @@
     }
 
     function mouseUp() {
-        if (moving && !moving.hasMoved()) {
+        $blockPan = false;
+
+        if (!moving) return;
+
+        if (!moving.hasMoved()) {
             // We didn't move just clicked, narrow selection to this Node
             selected.selectOne(data);
+        } else if ($selectedCount === 1) {
+            // Moving a single node won't keep the selection
+            selected.deselectAll();   
         }
 
         moving = null;
-        $blockPan = false;
     }
 
     function mouseMove(){
