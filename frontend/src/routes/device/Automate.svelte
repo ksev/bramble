@@ -113,7 +113,7 @@
             case "Backspace":
             case "Delete":
                 const keys = Array.from($selected.keys());
-                selected.deselectAll();
+                selected.deselectAll(true);
 
                 for (const nodeId of keys) {
                     nodes.remove(nodeId);
@@ -146,8 +146,8 @@
     }
 
     function deselect() {
-        if (selectBox) return;
-        selected.deselectAll();
+        if (selectBox || grabbed) return;
+        selected.deselectAll(true);
     }
 
     function mouseMove(e: MouseEvent) {

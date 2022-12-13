@@ -4,7 +4,7 @@ use tracing::debug;
 
 use crate::bus::BUS;
 
-pub static SOURCES: Lazy<Sources> = Lazy::new(|| Sources::default());
+pub static SOURCES: Lazy<Sources> = Lazy::new(Sources::default);
 
 type Value = Result<serde_json::Value, String>;
 

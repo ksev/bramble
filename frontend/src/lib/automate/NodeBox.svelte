@@ -19,7 +19,8 @@
 
     function mouseDown() {
         if (!isSelected) {
-            selected.selectOne(data);
+            // This is the only non sticky selection which means we will de-select after move
+            selected.selectOne(data, false);
         }
 
         moving = selected.startMove($pointer);
@@ -34,9 +35,8 @@
         if (!moving.hasMoved()) {
             // We didn't move just clicked, narrow selection to this Node
             selected.selectOne(data);
-        } else if ($selectedCount === 1) {
-            // Moving a single node won't keep the selection
-            selected.deselectAll();   
+        } else {
+            selected.deselectAll();
         }
 
         moving = null;

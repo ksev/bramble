@@ -16,7 +16,7 @@ impl<T> Topic<T>
 where
     T: Clone,
 {
-    pub fn subscribe<'a>(&'a self) -> impl Stream<Item = T> + 'a {
+    pub fn subscribe(&self) -> impl Stream<Item = T> + '_ {
         let mut subs = self.subs.lock().expect("Lock subscribers");
 
         let mutex = Arc::new(Mutex::new(smallvec![]));

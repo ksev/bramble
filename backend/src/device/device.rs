@@ -56,7 +56,7 @@ impl Device {
     /// Save the device to storage
     pub fn save(&self) -> Result<()> {
         let tree = db::tree("device")?;
-        tree.insert(&self.id, &self)?;
+        tree.insert(&self.id, self)?;
 
         Ok(())
     }

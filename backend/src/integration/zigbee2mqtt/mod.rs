@@ -104,7 +104,7 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
                 }
             }
 
-            let output = spec.kind.validate(&value);
+            let output = spec.kind.validate(value);
             SOURCES.set(key, output);
         }
     }

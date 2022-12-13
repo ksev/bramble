@@ -34,4 +34,4 @@ impl GlobalBus {
 
 }
 
-pub static BUS: Lazy<GlobalBus> = Lazy::new(|| GlobalBus::default());
+pub static BUS: Lazy<GlobalBus> = Lazy::new(GlobalBus::default);

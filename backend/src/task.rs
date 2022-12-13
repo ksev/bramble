@@ -43,7 +43,7 @@ impl Task {
 
         self.tx
             .send(TaskHandle {
-                label: label.into(),
+                label,
                 handle,
             })
             .expect("Could not tell task group about join handle");
@@ -74,7 +74,7 @@ impl Task {
 
         self.tx
             .send(TaskHandle {
-                label: label.into(),
+                label,
                 handle,
             })
             .expect("Could not tell task group about join handle");

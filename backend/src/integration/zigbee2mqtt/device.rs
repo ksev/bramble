@@ -323,7 +323,7 @@ pub enum Feature {
 }
 
 fn clean_up_name(name: &str) -> String {
-    let replaced = name.replace("_", " ");
+    let replaced = name.replace('_', " ");
     let mut iter = replaced.chars();
 
     let Some(first) = iter.next() else {

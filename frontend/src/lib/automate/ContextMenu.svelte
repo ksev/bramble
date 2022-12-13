@@ -11,7 +11,7 @@
     let items = ALL;
 
     function onMouseLeave() {
-       timer = setTimeout(() => contextMenu.set(null), 250);
+       timer = setTimeout(() => contextMenu.set(null), 350);
     }
     
     function onMouseEnter() {
