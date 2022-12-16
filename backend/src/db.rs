@@ -4,7 +4,10 @@ use serde::{Serialize, de::DeserializeOwned};
 
 static DB: Lazy<sled::Db> = Lazy::new(|| {
     // I want this to crash
-    sled::open("data").expect("Could not open database")
+    sled::Config::default()
+        .path("data")
+        .cache_capacity(500_000)
+        .open().expect("Could not open database")
 });
 
 pub struct Tree {

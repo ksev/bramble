@@ -29,5 +29,4 @@ dist-ssr
 target
 
 *_generated*
-ui/src/net/protocol
-data/
+/data
