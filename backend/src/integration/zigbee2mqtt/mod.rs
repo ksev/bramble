@@ -1,4 +1,3 @@
-//mod server;
 mod device;
 
 use std::sync::Arc;
@@ -6,20 +5,20 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use bytes::Buf;
-//pub use server::*;
 pub use device::*;
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use serde_json::Value;
 use tracing::error;
 
 use crate::{
     bus::BUS,
+    db,
     device::{TaskSpec, SOURCES},
     io::mqtt::{MqttServerInfo, MqttSubscribe},
     task::Task,
 };
 
-pub async fn zigbee2mqtt_update(server: MqttServerInfo, _: Task) -> Result<()> {
+pub async fn zigbee2mqtt_update((parent, server): (String, MqttServerInfo), mut t: Task) -> Result<()> {
     let mut channel = BUS.mqtt.published.subscribe();
 
     BUS.mqtt.subscribe.publish(MqttSubscribe {
@@ -31,30 +30,52 @@ pub async fn zigbee2mqtt_update(server: MqttServerInfo, _: Task) -> Result<()> {
         if topic == "zigbee2mqtt/bridge/devices" {
             let reader = data.reader();
 
-            let device_spec: Vec<Device> =
-                serde_json::de::from_reader(reader)?;
+            let device_spec: Vec<Device> = serde_json::de::from_reader(reader)?;
 
             let iter = device_spec
                 .into_iter()
-                .filter_map(|d| d.into_device(server.clone()));
-                
-            for device in iter {
+                .filter_map(|d| d.into_device(&parent, server.clone()));
+
+            let mut tx = db::pool().await.begin().await?;
+
+            for (device, features) in iter {
+                // Persist the device
+                device.save(&mut tx).await?;
+
+                for feature in features {
+                    feature.save(&device.id, &mut tx).await?;
+                }
+
+                device.spawn_tasks(&mut t);
+
                 BUS.device.add.publish(Arc::new(device));
             }
+
+            tx.commit().await?;
         }
     }
 
     Ok(())
 }
 
-pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> Result<()> {
-    use TaskSpec::Zigbee2MqttDevice;
+pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
+    let (device, features) = {
+        use crate::device::{Device, Feature};
 
-    let mut channel = BUS.mqtt.published.subscribe();
+        let pool = db::pool().await;
+        let device = Device::load_by_id(&device_id, pool).await?;
+        let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, pool).try_collect().await?;
+
+        (device, features)
+    };
+
+    use TaskSpec::Zigbee2MqttDevice;
 
     let Some(Zigbee2MqttDevice(subscribe)) = device.task_spec.get(0) else {
         anyhow::bail!("zigbee2mqtt_device did not get a task spec it expected, this is a bug");
     };
+
+    let mut channel = BUS.mqtt.published.subscribe();
 
     BUS.mqtt.subscribe.publish(subscribe.clone());
 
@@ -72,7 +93,7 @@ pub async fn zigbee2mqtt_device(device: Arc<crate::device::Device>, _: Task) -> 
             }
         };
 
-        for spec in device.features.iter().filter(|f| f.direction.can_read()) {
+        for spec in &features {
             let ptr = &format!("/{}", spec.id);
             let key = (device.id.clone(), spec.id.clone());
 

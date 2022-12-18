@@ -4,6 +4,7 @@
     import Icon from './Icon.svelte';
     import Value from './Value.svelte';
     import Feature from './Feature.svelte';
+  import { fade } from 'svelte/transition';
 
     function slideNFade(node: Element, { delay = 0, duration = 400 }) {
         const o = +getComputedStyle(node).opacity;
@@ -33,7 +34,7 @@
         </div>
 
         {#if !open && sources.length > 0}
-            <div class="mini-view" transition:slideNFade={{ duration: 200 }}>
+            <div class="mini-view" transition:slideNFade|local={{ duration: 200 }}>
                 {#each sources as source}
                     <Value deviceId={device.id} spec={source} />
                 {/each}
@@ -42,7 +43,7 @@
     </div>
     
     {#if open}
-        <div class="details">
+        <div class="details" transition:fade|local={{duration: 200}}>
             {#each device.features as feature}
                 <Feature deviceId={device.id} spec={feature} />
             {/each}

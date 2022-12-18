@@ -5,7 +5,7 @@ use serde_derive::Deserialize;
 use tracing::error;
 
 use crate::{
-    device::{TaskSpec, ValueDirection, ValueKind, ValueSpec},
+    device::{TaskSpec, ValueDirection, ValueKind},
     io::mqtt::{MqttServerInfo, MqttSubscribe},
 };
 
@@ -37,14 +37,18 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn into_device(self, server: MqttServerInfo) -> Option<crate::device::Device> {
+    pub fn into_device(
+        self,
+        parent: &str,
+        server: MqttServerInfo,
+    ) -> Option<(crate::device::Device, Vec<crate::device::Feature>)> {
         let def = self.definition?;
         let topic = format!("zigbee2mqtt/{}", self.friendly_name);
         let subscribe = MqttSubscribe { server, topic };
 
         // Filter out duplicate properties
         let features = def
-            .to_value_specs()
+            .to_feature()
             .into_iter()
             .unique_by(|f| f.id.clone())
             .collect();
@@ -52,11 +56,12 @@ impl Device {
         let out = crate::device::Device {
             id: self.ieee_address,
             name: self.friendly_name,
+            device_type: crate::device::DeviceType::Hardware,
+            parent: Some(parent.into()),
             task_spec: vec![TaskSpec::Zigbee2MqttDevice(subscribe)],
-            features,
         };
 
-        Some(out)
+        Some((out, features))
     }
 }
 
@@ -70,7 +75,7 @@ pub struct Definition {
 }
 
 impl Definition {
-    pub fn to_value_specs(&self) -> Vec<ValueSpec> {
+    pub fn to_feature(&self) -> Vec<crate::device::Feature> {
         let mut stack = self.exposes.iter().collect::<Vec<_>>();
         let mut out = vec![];
 
@@ -92,7 +97,7 @@ impl Definition {
                         }
                     };
 
-                    out.push(ValueSpec {
+                    out.push(crate::device::Feature {
                         name: clean_up_name(name),
                         id: property.clone(),
                         kind: ValueKind::Bool,
@@ -119,7 +124,7 @@ impl Definition {
                         }
                     };
 
-                    out.push(ValueSpec {
+                    out.push(crate::device::Feature {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
@@ -142,7 +147,7 @@ impl Definition {
                         }
                     };
 
-                    out.push(ValueSpec {
+                    out.push(crate::device::Feature {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
@@ -166,7 +171,7 @@ impl Definition {
                         }
                     };
 
-                    out.push(ValueSpec {
+                    out.push(crate::device::Feature {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
@@ -189,7 +194,7 @@ impl Definition {
                         }
                     };
 
-                    out.push(ValueSpec {
+                    out.push(crate::device::Feature {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,

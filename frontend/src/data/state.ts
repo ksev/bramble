@@ -31,7 +31,7 @@ socket.subscribe(ws => {
     ws.onmessage = message => {
       let data: Message = JSON.parse(message.data);
   
-      switch (data.type) {
+      switch (data.event) {
         case 'device': {
           devicesMap.set(data.id, data);
           devicesList.set(Array.from(devicesMap.values()));

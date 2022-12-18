@@ -6,8 +6,8 @@
     import { Extent, Point, Rect } from "$data/geometry";
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
-    import { derived, get, writable } from "svelte/store";
-    import { devices, devicesMap } from "$data/state";
+    import { derived, writable } from "svelte/store";
+    import { devicesMap } from "$data/state";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
 
     export let params: {
@@ -87,11 +87,8 @@
     );
 
     function wheel(e: WheelEvent) {
-        const sens = 0.001,
-        max = 3.0,
-        min = (Math.min(width, height) / axisSize) * 1.5;
-
-        zoom = Math.max(min, Math.min(max, zoom - e.deltaY * sens)) ;
+        const sens = 0.001;
+        zoom = zoom - e.deltaY * sens;
     }
 
     function keyDown(e: KeyboardEvent) {
@@ -195,6 +192,14 @@
         );
     }
 
+    $: {
+        const max = 3.0;
+        const min = 0.1;
+
+        zoom = Math.max(min, Math.min(max, zoom));
+        zoom = Math.round(zoom * 100) / 100;
+    }
+
     $: transform = `
         transform: 
             translate(${panX}px, ${panY}px) 
@@ -218,6 +223,19 @@
      on:wheel|passive={wheel}
      class:grabbed
      class:grabenabled={spaceDown}>
+
+     <div class="top-menu">
+        <div>
+            Hello
+        </div>
+
+
+        <div class="zoom-box">
+            <div class="plus" on:click={() => zoom += 0.1}>+</div>
+            <div class="value">{(zoom * 100).toFixed(0)}%</div>
+            <div class="minus" on:click={() => zoom -= 0.1}>-</div>
+        </div>
+     </div>
 
     {#if $contextMenu}
         <ContextMenu />
@@ -261,7 +279,7 @@
         background: var(--container);
         padding: 0;
         margin: 0;
-        border-radius: 4px;
+        border-radius: 6px;
         position: relative;
         overflow: hidden;
 
@@ -273,7 +291,7 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        width: 100%;
+        width: 100%; 
     }
 
     .node-editor .grid {
@@ -307,5 +325,48 @@
         position: absolute;
         border: 3px dashed var(--background);
         z-index: 50;
+    }
+
+    .top-menu {
+        z-index: 950;
+        padding: 12px;
+        background-color: rgba(31, 31, 51, 0.8);
+        color: rgb(166, 166, 166);
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .zoom-box {
+        display: inline-flex;
+        flex-direction: row;
+        gap: 3px;
+        background-color: var(--container);
+        border-radius: 4px;
+        overflow: hidden;
+        padding: 2px;
+    }
+
+    .zoom-box > div {
+        padding: 3px;
+        transition: 200ms background-color;
+    }
+
+    .zoom-box > .value {
+        width: 40px;
+        text-align: center;
+    }
+
+    .zoom-box > .plus, .zoom-box > .minus {
+        width: 20px;
+        text-align: center;
+        border-radius: 4px;
+    }
+
+    .zoom-box > .plus:hover, .zoom-box > .minus:hover {
+        background-color: var(--background);
+    }
+
+    .zoom-box > .plus:active, .zoom-box > .minus:active {
+        background-color: var(--container);
     }
 </style>

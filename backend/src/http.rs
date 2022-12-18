@@ -1,45 +1,38 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
+use async_graphql::{http::GraphiQLSource, EmptyMutation, Schema};
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::{
-    extract::{
-        ws::{Message, WebSocket},
-        WebSocketUpgrade,
-    },
-    headers,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::{get, get_service},
-    Router, TypedHeader,
+    extract::Extension,
+    response::{self, IntoResponse},
+    routing::get,
+    Router,
 };
 
-use futures::{stream::SplitSink, SinkExt, StreamExt};
-use futures_concurrency::prelude::*;
+use crate::{api::{ApiSchema, Query, Subscription}, task::Task};
 
-use serde_derive::{Deserialize, Serialize};
-use tower_http::services::ServeDir;
-use tracing::{debug, error};
+async fn graphql_handler(schema: Extension<ApiSchema>, req: GraphQLRequest) -> GraphQLResponse {
+    schema.execute(req.into_inner()).await.into()
+}
 
-use crate::{
-    bus::BUS,
-    device::{Device, SOURCES},
-};
+async fn graphiql() -> impl IntoResponse {
+    response::Html(
+        GraphiQLSource::build()
+            .endpoint("http://localhost:8080/api")
+            .subscription_endpoint("ws://localhost:8080/api/ws")
+            .finish(),
+    )
+}
 
-pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
+pub async fn listen(task: Task, address: SocketAddr) -> anyhow::Result<()> {
+    let schema = Schema::build(Query, EmptyMutation, Subscription)
+        .data(task)
+        .finish();
+
     let app = Router::new()
-        .fallback(
-            get_service(
-                ServeDir::new("examples/websockets/assets").append_index_html_on_directories(true),
-            )
-            .handle_error(|error: std::io::Error| async move {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Unhandled internal error: {}", error),
-                )
-            }),
-        )
-        // routes are matched from bottom to top, so we have to put `nest` at the
-        // top since it matches all routes
-        .route("/pipe", get(ws_handler));
+        .route("/api", get(graphiql).post(graphql_handler))
+        .route_service("/api/ws", GraphQLSubscription::new(schema.clone()))
+        .layer(Extension(schema));
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
@@ -51,6 +44,8 @@ pub async fn listen(address: SocketAddr) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/*
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -79,7 +74,7 @@ struct Publish {
 }
 
 #[derive(Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "event")]
 pub enum Response<'a> {
     #[serde(rename = "error")]
     Error { message: String },
@@ -101,7 +96,7 @@ pub enum Update {
 
 async fn handle_socket_err(mut socket: WebSocket) -> anyhow::Result<()> {
     // Send current state down the pipe first
-    for device in Device::all()? {
+    for device in Device::all().await? {
         let data = serde_json::to_string(&Response::Device(&device))?;
         socket.send(Message::Text(data)).await?;
     }
@@ -180,3 +175,4 @@ async fn handle_update(
 
     Ok(())
 }
+ */

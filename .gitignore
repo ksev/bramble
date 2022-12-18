@@ -30,3 +30,5 @@ target
 
 *_generated*
 /data
+
+rome.sqlite3

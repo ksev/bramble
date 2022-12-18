@@ -1,5 +1,6 @@
 <script lang="ts">
-    import type { ValueSpec } from "$data/device";
+    import colors from "$data/colors";
+import type { ValueSpec } from "$data/device";
     import { value } from "$data/state";
     import Icon from "./Icon.svelte";
 

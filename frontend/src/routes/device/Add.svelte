@@ -13,7 +13,7 @@
     const virtualGradient = `linear-gradient(180deg, ${Colors.feature} 50%, ${Colors.automation} 90%)`;
 </script>
 
-<div in:fade={{duration: 100}}>
+<div>
     <h1>Add Device</h1>
 
     <p>

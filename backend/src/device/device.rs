@@ -1,29 +1,28 @@
-use std::{collections::BTreeMap, sync::Arc};
-
 use anyhow::Result;
+use futures::Stream;
 use serde_derive::{Deserialize, Serialize};
-use serde_json::Value;
+use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteExecutor};
 
-use crate::{task::Task, db};
+use crate::task::Task;
 
 use super::TaskSpec;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Device {
     pub id: String,
     /// Name of the device
     pub name: String,
+    /// Define what type of device this is
+    pub device_type: DeviceType,
+    /// Defined if some other device is controlling this device
+    pub parent: Option<String>,
     /// What do we need to create in order for data to flow into sources and out of sinks
     /// This needs to be plain data so we can recreate the tasks on restart
-    #[serde(default)]
     pub task_spec: Vec<TaskSpec>,
-    /// All the values this Devices exposes or reads and handles
-    #[serde(default)]
-    pub features: Vec<ValueSpec>,
 }
 
 impl Device {
-    pub async fn spawn_tasks(self: Arc<Self>, task: &mut Task) {
+    pub fn spawn_tasks(&self, task: &mut Task) {
         for spec in &self.task_spec {
             match spec {
                 TaskSpec::Zigbee2Mqtt(server) => {
@@ -36,7 +35,7 @@ impl Device {
 
                     task.spawn_with_argument(
                         label,
-                        server.clone(),
+                        (self.id.clone(), server.clone()),
                         crate::integration::zigbee2mqtt::zigbee2mqtt_update,
                     );
                 }
@@ -45,7 +44,7 @@ impl Device {
 
                     task.spawn_with_argument(
                         label,
-                        self.clone(),
+                        self.id.clone(),
                         crate::integration::zigbee2mqtt::zigbee2mqtt_device,
                     )
                 }
@@ -54,88 +53,74 @@ impl Device {
     }
 
     /// Save the device to storage
-    pub fn save(&self) -> Result<()> {
-        let tree = db::tree("device")?;
-        tree.insert(&self.id, self)?;
+    pub async fn save<'a, E>(&'a self, tx: E) -> Result<()>
+    where
+        E: SqliteExecutor<'a>,
+    {
+        sqlx::query(include_str!("../../sql/device_insert.sql"))
+            .bind(&self.id)
+            .bind(&self.name)
+            .bind(Json(&self.device_type))
+            .bind(&self.parent)
+            .bind(Json(&self.task_spec))
+            .execute(tx)
+            .await?;
 
         Ok(())
     }
 
-    pub fn all() -> Result<impl Iterator<Item = Device>> {
-        let tree = db::tree("device")?;
-        Ok(tree.all::<Device>())
+    pub fn all<'a, E>(tx: E) -> impl Stream<Item = Result<Device, sqlx::Error>> + 'a
+    where
+        E: SqliteExecutor<'a> + 'a,
+    {
+        sqlx::query(include_str!("../../sql/device_all.sql"))
+            .try_map(|row: SqliteRow| {
+                let Json(task_spec): Json<Vec<TaskSpec>> = row.try_get("task_spec")?;
+                let Json(device_type): Json<DeviceType> = row.try_get("type")?;
+
+                Ok(Device {
+                    id: row.try_get("id")?,
+                    name: row.try_get("name")?,
+                    parent: row.try_get("parent")?,
+                    device_type,
+                    task_spec,
+                })
+            })
+            .fetch(tx)
+    }
+
+    pub async fn load_by_id<'a, E>(device_id: &str, tx: E) -> Result<Device>
+    where
+        E: SqliteExecutor<'a>,
+    {
+        let dev = sqlx::query(include_str!("../../sql/device_by_id.sql"))
+            .bind(device_id)
+            .try_map(|row: SqliteRow| {
+                let Json(task_spec): Json<Vec<TaskSpec>> = row.try_get("task_spec")?;
+                let Json(device_type): Json<DeviceType> = row.try_get("type")?;
+
+                Ok(Device {
+                    id: row.try_get("id")?,
+                    name: row.try_get("name")?,
+                    parent: row.try_get("parent")?,
+                    device_type,
+                    task_spec,
+                })
+            })
+            .fetch_one(tx)
+            .await?;
+
+        Ok(dev)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(tag="type")]
-pub enum ValueKind {
-    #[serde(rename = "bool")]
-    Bool,
-    #[serde(rename = "number")]
-    Number { unit: Option<String> },
-    #[serde(rename = "state")]
-    State { possible: Vec<String> },
-    #[serde(rename = "string")]
-    String,
-}
-
-impl ValueKind {
-    // TODO: this is a wierd API
-    pub fn validate(&self, value: &Value) -> Result<Value, String> {
-        match (value, self) {
-            (Value::Null, _) => Ok(Value::Null),
-            (Value::Bool(b), ValueKind::Bool) => Ok(Value::Bool(*b)),
-            (Value::Number(n), ValueKind::Number { .. }) => Ok(Value::Number(n.clone())),
-            (Value::String(s), ValueKind::String) => Ok(Value::String(s.clone())),
-
-            (Value::String(s), ValueKind::State { possible }) => {
-                if s.is_empty() {
-                    // Treat empty strings a null, quite a few devices go back to an "empty", state 
-                    Ok(Value::Null)
-                } else if possible.contains(s) {
-                    Ok(Value::String(s.clone()))
-                } else {
-                    Err(format!("{} is not part of state set {:?}", s, possible))
-                }
-            }
-
-            (Value::Array(_), _) => Err("Only descrete json values allowed, got array".into()),
-            (Value::Object(_), _) => Err("Only descrete json values allowed, got array".into()),
-
-            (a, b) => Err(format!(
-                "Got value of {:?} expected value of kind {:?}",
-                a, b
-            )),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ValueSpec {
-    pub id: String,
-    pub name: String,
-    pub direction: ValueDirection,
-    pub kind: ValueKind,
-    pub meta: BTreeMap<String, serde_json::Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub enum ValueDirection {
-    #[serde(rename = "source")]
-    Source,
-    #[serde(rename = "sink")]
-    Sink,
-    #[serde(rename = "sourceSink")]
-    SourceSink
-}
-
-impl ValueDirection {
-    pub fn can_read(&self) -> bool {
-        match self {
-            ValueDirection::Source => true,
-            ValueDirection::Sink => false,
-            ValueDirection::SourceSink => true,
-        }
-    }
+#[serde(tag = "type")]
+pub enum DeviceType {
+    #[serde(rename = "intergration")]
+    Integration { name: String },
+    #[serde(rename = "hardware")]
+    Hardware,
+    #[serde(rename = "virtual")]
+    Virtual,
 }

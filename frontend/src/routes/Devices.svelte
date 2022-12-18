@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { fade } from 'svelte/transition'
     import { devices } from '$data/state';
 
     import Ledger from '$lib/Ledger.svelte';
@@ -14,7 +13,7 @@
     $: empty = $devices.length === 0;
 </script>
 
-<div in:fade={{duration: 100}}>
+<div>
     <h1>Device management</h1>
 
     <p>

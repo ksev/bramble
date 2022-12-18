@@ -16,7 +16,9 @@ use crate::{
 pub struct MqttServerInfo {
     pub host: String,
     pub port: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
 }
 

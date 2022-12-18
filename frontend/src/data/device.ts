@@ -1,7 +1,7 @@
 export type Result<T> = { Ok: T } | { Err: string };
 
 export interface Value { 
-  type: 'value'
+  event: 'value'
   device: string,
   property: string,
   value: Result<number | string | null | boolean> 
@@ -23,7 +23,7 @@ export interface ValueSpec {
 }
 
 export interface Device {
-  type: 'device'
+  event: 'device'
   id: string
   name: string
   features: ValueSpec[]

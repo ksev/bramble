@@ -1,45 +1,33 @@
+use std::str::FromStr;
+
 use anyhow::Result;
-use once_cell::sync::Lazy;
-use serde::{Serialize, de::DeserializeOwned};
+use tokio::sync::OnceCell;
 
-static DB: Lazy<sled::Db> = Lazy::new(|| {
-    // I want this to crash
-    sled::Config::default()
-        .path("data")
-        .cache_capacity(500_000)
-        .open().expect("Could not open database")
-});
+use sqlx::{
+    sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqlitePoolOptions},
+    SqlitePool,
+};
 
-pub struct Tree {
-    inner: sled::Tree,
+static POOL: OnceCell<SqlitePool> = OnceCell::const_new();
+
+async fn open_pool() -> Result<SqlitePool> {
+    let options = SqliteConnectOptions::from_str("sqlite:rome.sqlite3")?
+        .create_if_missing(true)
+        .auto_vacuum(SqliteAutoVacuum::Full);
+        
+    let pool = SqlitePoolOptions::new()
+        .max_connections(3)
+        .connect_with(options)
+        .await?;
+
+    Ok(pool)
 }
 
-impl Tree {
-    pub fn insert<S>(&self, key: &str, value: S) -> Result<()>
-    where
-        S: Serialize,
-    {
-        let key = key.as_bytes();
-        let vec = flexbuffers::to_vec(value)?;
-
-        self.inner.insert(key, vec)?;
-
-        Ok(())
-    }
-
-    pub fn all<S>(&self) -> impl Iterator<Item = S> where S: DeserializeOwned + std::fmt::Debug {
-        self.inner
-            .iter()
-            .values()
-            .filter_map(|v| v.ok())
-            .map(|value| flexbuffers::from_slice(&value))
-            .filter_map(|v| v.ok())
-    }
-}
-
-pub fn tree(name: &str) -> Result<Tree> {
-    let key = name.as_bytes();
-    let inner = DB.open_tree(key)?;
-
-    Ok(Tree { inner })
+/**
+ * Get the global database connection pool
+ */
+pub async fn pool() -> &'static SqlitePool {
+    POOL.get_or_try_init(open_pool)
+        .await
+        .expect("Could not open database")
 }

@@ -22,9 +22,9 @@
         $pipe({
             topic: "device.add",
             payload: {
-                id: `zigbee2mqtt:${host}:${port}`,
+                id: `z2mqtt:${host}:${port}`,
                 name: `Zigbee2Mqtt (${host})`,
-                group: 'integration/zigbee2mqtt',
+                type: { type: "intergration", name: "zigbee2mqtt" },
                 task_spec: [{
                     type: 'zigbee2Mqtt',
                     host,
@@ -49,7 +49,7 @@
 <div class="ledger">
     <Ledger>
         <div>
-            <Icon name="microchip" color={Colors.device} size={18} />
+            <Icon name="cpu" color={Colors.device} size={18} />
             <span>Device</span>
         </div>
     </Ledger>
