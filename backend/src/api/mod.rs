@@ -3,8 +3,9 @@ use std::{collections::BTreeMap, sync::Arc};
 use futures::TryStreamExt;
 
 use anyhow::Result;
-use async_graphql::{EmptyMutation, Object, Schema, SimpleObject, Subscription};
+use async_graphql::{Object, Schema, SimpleObject, Subscription};
 use futures::{Stream, StreamExt};
+use uuid::Uuid;
 
 use crate::{bus::BUS, db};
 
@@ -71,7 +72,7 @@ impl Device {
     async fn parent(&self) -> Option<&'_ String> {
         self.borrow().parent.as_ref()
     }
-
+    /// All the features a device exposes
     async fn features(&self) -> Result<Vec<Feature>> {
         let conn = db::pool().await;
 
@@ -102,9 +103,66 @@ impl Feature {
     async fn direction(&self) -> crate::device::ValueDirection {
         self.inner.direction
     }
-
+    /// What type of value this feature has
+    async fn kind(&self) -> crate::device::ValueKind {
+        self.inner.kind
+    }
+    /// Json metadata about the feature
+    /// Common meta data is Number unit a list of possible States for state
     async fn meta(&self) -> &BTreeMap<String, serde_json::Value> {
         &self.inner.meta
+    }
+}
+
+pub struct Mutation;
+
+#[Object]
+impl Mutation {
+    /// Create a new generic virtual device, this is just a recepticle to
+    /// attach value buffers to
+    async fn generic_device(&self, name: String) -> Result<String> {
+        let id = Uuid::new_v4().to_string();
+
+        let conn = db::pool().await;
+
+        let device = crate::device::Device {
+            id: id.clone(),
+            name,
+            device_type: crate::device::DeviceType::Virtual {
+                vty: crate::device::VirtualType::Generic,
+            },
+            parent: None,
+            task_spec: vec![],
+        };
+
+        device.save(conn).await?;
+
+        Ok(id)
+    }
+    /// Create a value buffer on the target device
+    /// this device must exist
+    async fn value_buffer(
+        &self,
+        device_id: String,
+        name: String,
+        kind: crate::device::ValueKind,
+        meta: Option<BTreeMap<String, serde_json::Value>>,
+    ) -> Result<String> {
+        let id = Uuid::new_v4().to_string();
+
+        let conn = db::pool().await;
+
+        let feature = crate::device::Feature {
+            id: id.clone(),
+            name,
+            direction: crate::device::ValueDirection::SourceSink,
+            kind,
+            meta: meta.unwrap_or_default(),
+        };
+
+        feature.save(&device_id, conn).await?;
+
+        Ok(id)
     }
 }
 
@@ -132,4 +190,4 @@ impl Subscription {
     }
 }
 
-pub type ApiSchema = Schema<Query, EmptyMutation, Subscription>;
+pub type ApiSchema = Schema<Query, Mutation, Subscription>;

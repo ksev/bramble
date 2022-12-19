@@ -4,12 +4,18 @@ use async_graphql::{http::GraphiQLSource, EmptyMutation, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::{
     extract::Extension,
+    http::{header::CONTENT_TYPE, Method},
     response::{self, IntoResponse},
     routing::get,
     Router,
 };
 
-use crate::{api::{ApiSchema, Query, Subscription}, task::Task};
+use tower_http::cors::{Any, CorsLayer};
+
+use crate::{
+    api::{ApiSchema, Mutation, Query, Subscription},
+    task::Task,
+};
 
 async fn graphql_handler(schema: Extension<ApiSchema>, req: GraphQLRequest) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
@@ -25,14 +31,20 @@ async fn graphiql() -> impl IntoResponse {
 }
 
 pub async fn listen(task: Task, address: SocketAddr) -> anyhow::Result<()> {
-    let schema = Schema::build(Query, EmptyMutation, Subscription)
+    let schema = Schema::build(Query, Mutation, Subscription)
         .data(task)
         .finish();
+
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers([CONTENT_TYPE])
+        .allow_origin(Any);
 
     let app = Router::new()
         .route("/api", get(graphiql).post(graphql_handler))
         .route_service("/api/ws", GraphQLSubscription::new(schema.clone()))
-        .layer(Extension(schema));
+        .layer(Extension(schema))
+        .layer(cors);
 
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`

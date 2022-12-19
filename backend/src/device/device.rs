@@ -122,5 +122,17 @@ pub enum DeviceType {
     #[serde(rename = "hardware")]
     Hardware,
     #[serde(rename = "virtual")]
-    Virtual,
+    Virtual { vty: VirtualType },
+}
+
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum VirtualType {
+    #[serde(rename = "generic")]
+    Generic,
+    #[serde(rename = "button")]
+    Button,
+    #[serde(rename = "slider")]
+    Slider,
+    #[serde(rename = "toggle")]
+    Toggle,
 }

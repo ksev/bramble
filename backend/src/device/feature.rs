@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use async_graphql::{SimpleObject, Enum};
+use async_graphql::{Enum, SimpleObject};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -29,13 +29,12 @@ impl Feature {
             .bind(device_id)
             .try_map(|row: SqliteRow| {
                 let meta: Json<BTreeMap<String, serde_json::Value>> = row.try_get("meta")?;
-                let kind: Json<ValueKind> = row.try_get("kind")?;
 
                 Ok(Feature {
                     id: row.try_get("id")?,
                     name: row.try_get("name")?,
                     direction: row.try_get("direction")?,
-                    kind: kind.0,
+                    kind: row.try_get("kind")?,
                     meta: meta.0,
                 })
             })
@@ -51,21 +50,22 @@ impl Feature {
     where
         E: SqliteExecutor<'a> + 'a,
     {
-        sqlx::query(include_str!("../../sql/feature_by_device_readable_no_virtual.sql"))
-            .bind(device_id)
-            .try_map(|row: SqliteRow| {
-                let meta: Json<BTreeMap<String, serde_json::Value>> = row.try_get("meta")?;
-                let kind: Json<ValueKind> = row.try_get("kind")?;
+        sqlx::query(include_str!(
+            "../../sql/feature_by_device_readable_no_virtual.sql"
+        ))
+        .bind(device_id)
+        .try_map(|row: SqliteRow| {
+            let meta: Json<BTreeMap<String, serde_json::Value>> = row.try_get("meta")?;
 
-                Ok(Feature {
-                    id: row.try_get("id")?,
-                    name: row.try_get("name")?,
-                    direction: row.try_get("direction")?,
-                    kind: kind.0,
-                    meta: meta.0,
-                })
+            Ok(Feature {
+                id: row.try_get("id")?,
+                name: row.try_get("name")?,
+                direction: row.try_get("direction")?,
+                kind: row.try_get("kind")?,
+                meta: meta.0,
             })
-            .fetch(tx)
+        })
+        .fetch(tx)
     }
 
     /// Save a value spec
@@ -78,7 +78,7 @@ impl Feature {
             .bind(&self.id)
             .bind(&self.name)
             .bind(self.direction as u8)
-            .bind(Json(&self.kind))
+            .bind(self.kind as u8)
             .bind(Json(&self.meta))
             .execute(tx)
             .await?;
@@ -119,24 +119,32 @@ impl ValueDirection {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(tag = "type")]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, sqlx::Type, Enum, Copy, Clone)]
+#[repr(u8)]
 pub enum ValueKind {
-    #[serde(rename = "bool")]
-    Bool,
-    #[serde(rename = "number")]
-    Number {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        unit: Option<String>,
-    },
-    #[serde(rename = "state")]
-    State { possible: Vec<String> },
-    #[serde(rename = "string")]
-    String,
+    Bool = 0,
+    Number = 1,
+    State = 2,
+    String = 3,
+}
+
+impl TryFrom<u8> for ValueKind {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => ValueKind::Bool,
+            1 => ValueKind::Number,
+            2 => ValueKind::State,
+            3 => ValueKind::String,
+            _ => anyhow::bail!("value {} is not a valid ValueDirection", value),
+        })
+    }
 }
 
 impl ValueKind {
     // TODO: this is a wierd API
+    /*
     pub fn validate(&self, value: &Value) -> Result<Value, String> {
         match (value, self) {
             (Value::Null, _) => Ok(Value::Null),
@@ -164,4 +172,5 @@ impl ValueKind {
             )),
         }
     }
+    */
 }

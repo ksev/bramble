@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"] }
+uuid = { version = "1.2.2", features = [ "v4", "fast-rng" ] }
 slotmap = "1.0.6"
 futures = "0.3.25"
 dashmap = "5.4.0"
@@ -28,4 +29,4 @@ axum = { version = "0.6.1", features = ["ws", "headers"] }
 async-graphql = "5.0.4"
 async-graphql-axum = "5.0.4"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
-tower-http = { version = "0.2.0", features = ["fs", "trace"] }
+tower-http = { version = "0.3.5", features = ["fs", "trace", "cors"] }

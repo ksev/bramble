@@ -18,7 +18,10 @@ use crate::{
     task::Task,
 };
 
-pub async fn zigbee2mqtt_update((parent, server): (String, MqttServerInfo), mut t: Task) -> Result<()> {
+pub async fn zigbee2mqtt_update(
+    (parent, server): (String, MqttServerInfo),
+    mut t: Task,
+) -> Result<()> {
     let mut channel = BUS.mqtt.published.subscribe();
 
     BUS.mqtt.subscribe.publish(MqttSubscribe {
@@ -64,7 +67,9 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
 
         let pool = db::pool().await;
         let device = Device::load_by_id(&device_id, pool).await?;
-        let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, pool).try_collect().await?;
+        let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, pool)
+            .try_collect()
+            .await?;
 
         (device, features)
     };
@@ -125,8 +130,9 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
                 }
             }
 
-            let output = spec.kind.validate(value);
-            SOURCES.set(key, output);
+            todo!();
+            //let output = spec.kind.validate(value);
+            //SOURCES.set(key, output);
         }
     }
 

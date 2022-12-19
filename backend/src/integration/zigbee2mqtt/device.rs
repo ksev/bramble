@@ -128,8 +128,16 @@ impl Definition {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
-                        kind: ValueKind::Number { unit: unit.clone() },
-                        meta: BTreeMap::new(),
+                        kind: ValueKind::Number,
+                        meta: unit
+                            .iter()
+                            .map(|v| {
+                                (
+                                    "unit".to_string(),
+                                    Into::<serde_json::Value>::into(v.clone()),
+                                )
+                            })
+                            .collect(),
                     })
                 }
 
@@ -151,10 +159,11 @@ impl Definition {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
-                        kind: ValueKind::State {
-                            possible: values.clone(),
-                        },
-                        meta: BTreeMap::new(),
+                        kind: ValueKind::State,
+                        meta: BTreeMap::from([(
+                            "possible".into(),
+                            serde_json::Value::from(values.clone()),
+                        )]),
                     })
                 }
 
@@ -198,7 +207,7 @@ impl Definition {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
-                        kind: ValueKind::Number { unit: None },
+                        kind: ValueKind::Number,
                         meta: BTreeMap::new(),
                     })
                 }

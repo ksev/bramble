@@ -13,7 +13,7 @@ CREATE TABLE "feature" (
 	"id"	TEXT NOT NULL,
 	"name"	TEXT NOT NULL,
 	"direction"	INTEGER NOT NULL,
-	"kind"	TEXT NOT NULL,
+	"kind"	INTEGER NOT NULL,
 	"meta"	TEXT NOT NULL,
 	FOREIGN KEY("device") REFERENCES "device"("id") ON DELETE CASCADE,
 	PRIMARY KEY("device","id")

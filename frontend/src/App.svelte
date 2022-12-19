@@ -1,7 +1,7 @@
 <script lang="ts">
   import Router from 'svelte-spa-router';  
+  import { request, gql } from 'graphql-request';
 	
-
   import Icon from "$lib/Icon.svelte";
   import MainMenu from "$lib/MainMenu.svelte";
   import MenuItem from "$lib/MenuItem.svelte";
@@ -10,20 +10,12 @@
 
   import routes from './routes';
   import Colors from '$data/colors';
-  import { socket } from '$net/pipe';
-
-  import '$data/state'; // Make sure we start collecting data
 
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
 </script>
 
 <main style={cssColorVariables}>
-  {#if typeof $socket === 'number' && $socket > 500}
-  <div class="error">
-    ERROR: Could not connect to Rome service
-  </div>
-  {/if}
   <div class="main2">
     <menubar style="display: none">    
       <div>
