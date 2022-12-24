@@ -1,32 +1,37 @@
 <script lang="ts">
+    import { ValueKind } from "$data/api_types";
     import { automateContext } from "$data/automate/automate";
     import type { Slot, SlotRef } from "$data/automate/node";
-    import type { ValueKind } from "$data/device";
-    
-    const { nodes } = automateContext();
 
     export let slot: Slot;
-    export let adaptKind: SlotRef = null;
+    export let adaptKind: SlotRef = undefined;
+
+    const { nodes } = automateContext();
 
     let title = '';
 
     let kind: ValueKind;
+    let meta: Record<string, any>;
 
     $: if (adaptKind && !slot.multiple) {
-        kind = nodes.getSlot(adaptKind)?.kind ?? slot.kind;
+        const remoteSlot = nodes.getSlot(adaptKind);
+
+        kind = remoteSlot?.kind ?? slot.kind;
+        meta = remoteSlot?.meta ?? slot.meta;
     } else {
         kind = slot.kind;
+        meta = slot.meta;
     }
 
-    $: if (kind.type === 'state') {
-        title = `${kind.possible.join(', ')}`;
+    $: if (kind === 'STATE') {
+        title = `${meta.possible.join(', ')}`;
     }
 </script>
 
 <div title={title}>
     {slot.label}
-    {#if kind.type === 'number' && kind.unit} 
-        <span>{kind.unit}</span>
+    {#if meta?.unit} 
+        <span>{meta.unit}</span>
     {/if}
 </div>
 

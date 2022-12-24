@@ -40,6 +40,7 @@ export interface Slot {
     kind: ValueKind,
     multiple?: boolean,
     default?: number | string | boolean,
+    meta?: Record<string, any>
 }
 
 export class SlotRef {
@@ -69,7 +70,7 @@ export interface IncompleteConnection {
     over?: SlotRef
 };
 
-export function isNull(ctx: Context, inputKind: ValueKind = { type: "any" }): NodePrototype {
+export function isNull(ctx: Context, inputKind: ValueKind = "ANY"): NodePrototype {
     return {
         label: "Is null",
         icon: "bolt-off",
@@ -101,9 +102,7 @@ export function isNull(ctx: Context, inputKind: ValueKind = { type: "any" }): No
         outputs: [{
             id: "output",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL"
         }]
     }
 }
@@ -116,17 +115,13 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: {
-                type: "bool"
-            },
+            kind: "BOOL",
             multiple: true,
         }],
         outputs: [{
             id: "output",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL",
         }]
     },
     or: {
@@ -136,17 +131,13 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: {
-                type: "bool"
-            },
+            kind: "BOOL",
             multiple: true,
         }],
         outputs: [{
             id: "output",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL",
         }]
     },
     xor: {
@@ -156,17 +147,13 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: {
-                type: "bool"
-            },
+            kind: "BOOL",
             multiple: true,
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL",
         }]
     },
     not: {
@@ -176,16 +163,12 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: {
-                type: "bool"
-            },
+            kind: "BOOL",
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL",
         }]
     }
 }
@@ -200,25 +183,19 @@ export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
             {
                 id: "a",
                 label: "A",
-                kind: {
-                    type: "number",
-                }, 
+                kind: "NUMBER"
             },
             {
                 id: "b",
                 label: "B",
                 default: 1,
-                kind: {
-                    type: "number"
-                },
+                kind: "NUMBER",
             },
         ],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL",
         }]
     },
     max: {
@@ -229,36 +206,28 @@ export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
             id: "input",
             label: "Input",
             multiple: true,
-            kind: {
-                type: "number"
-            },
+            kind: "NUMBER",
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: {
-                type: "number"
-            }
+            kind: "NUMBER",
         }]
     },
     min: {
         label: "Min",
-        icon: "math-less",
+        icon: "math-lesser",
         color: colors.number,
         inputs: [{
             id: "input",
             label: "Input",
             multiple: true,
-            kind: {
-                type: "number"
-            },
+            kind: "NUMBER",
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: {
-                type: "number"
-            }
+            kind: "NUMBER",
         }]
     },
 }
@@ -274,10 +243,10 @@ export const STATE_OPS = {
                 // Specialize to the new possibilities
                 const outputSlot = ctx.nodes.getSlot(remote);
 
-                if (outputSlot?.kind?.type === "state") {
+                if (outputSlot?.kind === "STATE") {
                     ctx.nodes.replace(
                         local.nodeId, 
-                        STATE_OPS.compare(ctx, outputSlot.kind.possible)
+                        STATE_OPS.compare(ctx, [])
                     );
                 }
             }
@@ -294,18 +263,16 @@ export const STATE_OPS = {
             {
                 id: "input",
                 label: "Input",
-                kind: {
-                    type: "state",
+                kind: "STATE",
+                meta: {
                     possible,
-                }, 
+                }
             },
         ],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: {
-                type: "bool"
-            }
+            kind: "BOOL",
         }]
     })
 }
@@ -313,11 +280,12 @@ export const STATE_OPS = {
 export function deviceNode(device: Device): NodePrototype {
     const outputs: Slot[] = device
         .features
-        .filter(f => f.direction === "source" || f.direction === "sourceSink")
+        .filter(f => f.direction === "SOURCE" || f.direction === "SOURCE_SINK")
         .map(feature => ({
             id: feature.id,
             label: feature.name,
             kind: feature.kind,
+            meta: feature.meta,
         }));
 
     return {

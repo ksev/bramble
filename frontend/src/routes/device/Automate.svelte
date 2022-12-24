@@ -2,13 +2,14 @@
     import NodeBox from "$lib/automate/NodeBox.svelte";
 
     import { buildContext } from "$data/automate/automate";
-    import Colors from "$data/colors";
+    import colors, { Color, directionColor } from "$data/colors";
     import { Extent, Point, Rect } from "$data/geometry";
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
     import { derived, writable } from "svelte/store";
     import { devicesMap } from "$data/state";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
+    import Icon from "$lib/Icon.svelte";
 
     export let params: {
         deviceid: string,
@@ -34,6 +35,12 @@
 
     let spaceDown = false;
     let grabbed = false;
+
+    function home() {
+        x = 0;
+        y = 0;
+        zoom = 1.0;
+    }
 
     const device = devicesMap.get(params.deviceid);
     const feature = device.features.find(f => f.id === params.property);
@@ -63,13 +70,14 @@
         [{
             id: 0,
             label: device.name,
-            color: Colors[feature.direction],
+            color: directionColor(feature.direction),
             icon: "settings-automation",
             target: true,
             inputs: [{
                 id: feature.id,
                 label: `${feature.name}`,
                 kind: feature.kind,
+                meta: feature.meta,
             }],
             outputs: [],
         }],
@@ -95,6 +103,7 @@
         // If the event originates from an input, ignore it
         if ((e.target as HTMLElement)?.nodeName === 'INPUT') return;
         if (e.key === " " && !$blockPan) spaceDown = true;
+        if (e.ctrlKey && e.key === "a") selected.selectAll();
     }
 
     function keyUp(e: KeyboardEvent) {
@@ -104,7 +113,7 @@
         if (e.key == " ") spaceDown = false;
 
         switch (e.key) {
-            case ' ':
+            case " ":
                 spaceDown = false;
                 break;
             case "Backspace":
@@ -225,15 +234,47 @@
      class:grabenabled={spaceDown}>
 
      <div class="top-menu">
-        <div>
-            Hello
-        </div>
+        <ul class="dropdown-menu">
+            <li>
+                Save
+            </li>
+            <li class="submenu">
+                Node
+                <ul>
+                    <li>Device</li>
+                </ul>         
+                <div class="chevron">
+                    <Icon name="chevron-down" color={colors.fadedtext} size={12} />           
+                </div>
+            </li>               
+            <li>
+                Action
+                <ul>
+                    <li>Device</li>
+                </ul>         
+                <div class="chevron">
+                    <Icon name="chevron-down" color={colors.fadedtext} size={12} />           
+                </div>
+            </li>
+        </ul>
 
+        <div class="right-group">
+            <ul class="dropdown-menu">
+                <li><Icon name="box-align-top" color={colors.fadedtext} size={18} /></li>
+                <li><Icon name="box-align-bottom" color={colors.fadedtext} size={18} /></li>
+                <li><Icon name="box-align-left" color={colors.fadedtext} size={18} /></li>
+                <li><Icon name="box-align-right" color={colors.fadedtext} size={18} /></li>
+            </ul>
 
-        <div class="zoom-box">
-            <div class="plus" on:click={() => zoom += 0.1}>+</div>
-            <div class="value">{(zoom * 100).toFixed(0)}%</div>
-            <div class="minus" on:click={() => zoom -= 0.1}>-</div>
+            <ul class="dropdown-menu">
+                <li on:click={home}><Icon name="home" color={colors.fadedtext} size={18} /></li>
+            </ul>
+
+            <div class="zoom-box">
+                <div class="plus" on:click={() => zoom += 0.1}>+</div>
+                <div class="value">{(zoom * 100).toFixed(0)}%</div>
+                <div class="minus" on:click={() => zoom -= 0.1}>-</div>
+            </div>
         </div>
      </div>
 
@@ -331,9 +372,10 @@
         z-index: 950;
         padding: 12px;
         background-color: rgba(31, 31, 51, 0.8);
-        color: rgb(166, 166, 166);
+        color: var(--fadedtext);
         display: flex;
         justify-content: space-between;
+        align-items: center;
     }
 
     .zoom-box {
@@ -343,7 +385,10 @@
         background-color: var(--container);
         border-radius: 4px;
         overflow: hidden;
+        justify-content: center;
+        align-items: center;
         padding: 2px;
+        height: 27px;
     }
 
     .zoom-box > div {
@@ -368,5 +413,76 @@
 
     .zoom-box > .plus:active, .zoom-box > .minus:active {
         background-color: var(--container);
+    }
+
+    .dropdown-menu {
+        display: inline-flex;
+        gap: 1px;
+        
+        height: 27px;             
+    }
+
+    .dropdown-menu > li {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--container);
+        padding: 0 9px;
+        gap: 6px;
+    }
+
+    .dropdown-menu > li:hover {
+        background-color: var(--containerhigh);
+    }
+
+    .dropdown-menu > li.submenu:hover {
+        background-color: var(--background);
+    }
+
+    .dropdown-menu > li:active {
+        background-color: var(--container);
+    }
+
+    .dropdown-menu > li > ul {
+        display: none;
+        background-color: var(--background);
+        width: 200px;
+        height: 200px;
+
+        position: absolute;
+        top: 27px;
+        left: 0;
+        z-index: 1000;
+        padding: 9px;
+
+        border-radius: 0 4px 4px 4px;
+    }
+
+    .dropdown-menu > li > .chevron {
+        margin-top: 2px; 
+        margin-right: -3px;
+    }
+
+    .dropdown-menu > li.submenu {
+        position: relative;
+    }
+
+    .dropdown-menu > li.submenu:hover > ul {
+        display: flex;        
+    }
+
+    .dropdown-menu > li:first-child {
+        border-radius: 4px 0 0 4px;
+    }
+
+    .dropdown-menu > li:last-child {
+        border-radius: 0 4px 4px 0;
+    }
+
+    .right-group {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
     }
 </style>

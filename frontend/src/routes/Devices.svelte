@@ -19,10 +19,10 @@
     <p>
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. <strong>Devices</strong>
         Sed elementum metus a augue tempus, id venenatis nibh porttitor. Phasellus id malesuada mauris. 
-        Etiam et ante ut <strong>Source</strong> dolor gravida porttitor. 
+        Etiam et ante ut <strong>Output</strong> dolor gravida porttitor. 
         Cras molestie porta arcu, eu sollicitudin elit aliquam eu. Nulla non odio placerat, lacinia tortor ac, volutpat nunc. 
-        Integer pretium, est eu tempor volutpat <strong>Sink</strong>, tellus ex efficitur enim, vitae sodales ex mi et enim. Nullam id justo lectus. 
-        Suspendisse finibus id diam ac volutpat. Morbi vitae sem tellus. <strong>SourceSink</strong> Quisque posuere commodo sagittis. 
+        Integer pretium, est eu tempor volutpat <strong>Input</strong>, tellus ex efficitur enim, vitae sodales ex mi et enim. Nullam id justo lectus. 
+        Suspendisse finibus id diam ac volutpat. Morbi vitae sem tellus. <strong>Input &amp; Output</strong> Quisque posuere commodo sagittis. 
         Suspendisse posuere, massa nec tempus porta, eros magna rhoncus purus, ut scelerisque libero urna vitae ante.
     </p>
 

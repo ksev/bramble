@@ -17,14 +17,22 @@ impl Query {
     async fn device(&self, id: Option<String>) -> Result<Vec<Device>> {
         let pool = crate::db::pool().await;
 
-        let vec = crate::device::Device::all(pool)
-            .map_ok(|d| Device {
-                inner: DeviceInner::Owned(d),
-            })
-            .try_collect()
-            .await?;
+        if let Some(id) = id {
+            let device = crate::device::Device::load_by_id(&id, pool).await?;
 
-        Ok(vec)
+            Ok(vec![Device {
+                inner: DeviceInner::Owned(device),
+            }])
+        } else {
+            let vec = crate::device::Device::all(pool)
+                .map_ok(|d| Device {
+                    inner: DeviceInner::Owned(d),
+                })
+                .try_collect()
+                .await?;
+
+            Ok(vec)
+        }
     }
 }
 

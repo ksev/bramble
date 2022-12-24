@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use async_graphql::{http::GraphiQLSource, EmptyMutation, Schema};
+use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::{
     extract::Extension,

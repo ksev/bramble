@@ -130,9 +130,8 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
                 }
             }
 
-            todo!();
-            //let output = spec.kind.validate(value);
-            //SOURCES.set(key, output);
+            let output = spec.validate(value);
+            SOURCES.set(key, output);
         }
     }
 

@@ -11,4 +11,18 @@
         display: flex;
         flex-direction: column;
     }
+
+    select {
+        border: 4px solid var(--container);
+        background-color: var(--background);
+        border-radius: 4px;
+        padding: 6px;
+        color: var(--strong);
+        font-family: 'Roboto', sans-serif;
+        color: #cfd2dd;
+    }
+
+    select:disabled {
+        color: #cfd2dd6e;
+    }
 </style>

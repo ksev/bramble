@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use async_graphql::{Enum, SimpleObject};
+use async_graphql::Enum;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -85,6 +85,41 @@ impl Feature {
 
         Ok(())
     }
+
+    // TODO: this is a wierd API
+    pub fn validate(&self, value: &Value) -> Result<Value, String> {
+        let possible: Vec<String> = value
+            .get("possible")
+            .map(|v| serde_json::from_value(v.clone()))
+            .and_then(|s| s.ok())
+            .unwrap_or(vec![]);
+
+        match (value, self.kind) {
+            (Value::Null, _) => Ok(Value::Null),
+            (Value::Bool(b), ValueKind::Bool) => Ok(Value::Bool(*b)),
+            (Value::Number(n), ValueKind::Number { .. }) => Ok(Value::Number(n.clone())),
+            (Value::String(s), ValueKind::String) => Ok(Value::String(s.clone())),
+
+            (Value::String(s), ValueKind::State) => {
+                if s.is_empty() {
+                    // Treat empty strings a null, quite a few devices go back to an "empty", state
+                    Ok(Value::Null)
+                } else if possible.contains(s) {
+                    Ok(Value::String(s.clone()))
+                } else {
+                    Err(format!("{} is not part of state set {:?}", s, possible))
+                }
+            }
+
+            (Value::Array(_), _) => Err("Only descrete json values allowed, got array".into()),
+            (Value::Object(_), _) => Err("Only descrete json values allowed, got array".into()),
+
+            (a, b) => Err(format!(
+                "Got value of {:?} expected value of kind {:?}",
+                a, b
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, sqlx::Type, Enum)]
@@ -140,37 +175,4 @@ impl TryFrom<u8> for ValueKind {
             _ => anyhow::bail!("value {} is not a valid ValueDirection", value),
         })
     }
-}
-
-impl ValueKind {
-    // TODO: this is a wierd API
-    /*
-    pub fn validate(&self, value: &Value) -> Result<Value, String> {
-        match (value, self) {
-            (Value::Null, _) => Ok(Value::Null),
-            (Value::Bool(b), ValueKind::Bool) => Ok(Value::Bool(*b)),
-            (Value::Number(n), ValueKind::Number { .. }) => Ok(Value::Number(n.clone())),
-            (Value::String(s), ValueKind::String) => Ok(Value::String(s.clone())),
-
-            (Value::String(s), ValueKind::State { possible }) => {
-                if s.is_empty() {
-                    // Treat empty strings a null, quite a few devices go back to an "empty", state
-                    Ok(Value::Null)
-                } else if possible.contains(s) {
-                    Ok(Value::String(s.clone()))
-                } else {
-                    Err(format!("{} is not part of state set {:?}", s, possible))
-                }
-            }
-
-            (Value::Array(_), _) => Err("Only descrete json values allowed, got array".into()),
-            (Value::Object(_), _) => Err("Only descrete json values allowed, got array".into()),
-
-            (a, b) => Err(format!(
-                "Got value of {:?} expected value of kind {:?}",
-                a, b
-            )),
-        }
-    }
-    */
 }

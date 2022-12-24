@@ -1,6 +1,5 @@
 <script lang="ts">
   import Router from 'svelte-spa-router';  
-  import { request, gql } from 'graphql-request';
 	
   import Icon from "$lib/Icon.svelte";
   import MainMenu from "$lib/MainMenu.svelte";
@@ -57,18 +56,6 @@
     display: flex;
     position: relative;
     flex-grow: 1;
-  }
-
-  .error {
-    padding: 12px;
-    text-align: center;
-    color: var(--strong);
-    font-weight: bold;
-    font-size: 16px;
-
-    background-color: var(--error);
-    border-bottom: 1px solid #f98383;
-    text-shadow: 2px 2px rgba(255,255,255,0.25);
   }
 
   .name {

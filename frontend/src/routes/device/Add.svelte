@@ -1,6 +1,4 @@
-<script lang="ts">
-    import {fade} from 'svelte/transition'
-    
+<script lang="ts">    
     import Zigbee2Mqtt from '../../assets/zigbee2mqtt.svg';
     import Mqtt from '../../assets/mqtt.svg';
 
@@ -8,7 +6,7 @@
     import Icon from '$lib/Icon.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
 
-    import Colors, { Color } from '$data/colors';
+    import Colors from '$data/colors';
 
     const virtualGradient = `linear-gradient(180deg, ${Colors.feature} 50%, ${Colors.automation} 90%)`;
 </script>
@@ -23,7 +21,7 @@
     </p>
 
     <Section color={Colors.device}>
-        <span slot="headline">Direct</span>
+        <span slot="headline">Device</span>
 
         <div slot="content">
             <p>

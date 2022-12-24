@@ -116,7 +116,7 @@ export interface SelectionMove {
 }
 
 export function selectedStore(ctx: Context) {
-    const { subscribe, set } = writable(new Set<number>());
+    const { subscribe, set, update } = writable(new Set<number>());
     const count = derived({subscribe}, s => s.size);
     
     let isSticky = true;
@@ -166,7 +166,24 @@ export function selectedStore(ctx: Context) {
             isSticky = sticky;
             set(new Set([node.id]));
         },
+        select: (node: Node) => {
+            update(s => {
+                s.add(node.id);
+                return s;
+            });
+        },
+        selectAll: () => {
+            isSticky = true;
+            const ids = map(get(ctx.nodes), n => n.id);
+            set(new Set(ids));
+        },
         count,
+        deselect: (node: Node) => {
+            update(s => {
+                s.delete(node.id);
+                return s;
+            });
+        },
         deselectAll: (force: boolean = false) => {
             if (isSticky && !force) {
                 return;
@@ -193,17 +210,20 @@ export function nodeStore(ctx: Context, start: Node[]) {
 
             let p = get(ctx.pointer);
 
+            const x = p.x - 100;
+            const y = p.y - 10;
+
+            const origin = new Point(
+                Math.round(x/20) * 20,
+                Math.round(y/20) * 20,
+            );
+
             // Make sure the Node spawn under the pointer 
             // And is immidiately dragable
             ctx.layout.set(
                 id, 
                 layoutStore(
-                    Rect.numbers(
-                        p.x-100, 
-                        p.y-15, 
-                        200, 
-                        200
-                    )
+                    new Rect(origin, new Extent(200, 200))
                 )
             );
 

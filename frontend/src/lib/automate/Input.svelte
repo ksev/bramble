@@ -1,7 +1,6 @@
 <script lang="ts">
     import { automateContext } from "$data/automate/automate";
     import { type Slot, SlotRef } from "$data/automate/node";
-    import type { Readable } from "svelte/store";
     import SlotAnchor from "./SlotAnchor.svelte";
     import SlotLabel from "./SlotLabel.svelte";
 

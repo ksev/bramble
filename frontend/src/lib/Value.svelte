@@ -1,36 +1,32 @@
 <script lang="ts">
-    import colors from "$data/colors";
-import type { ValueSpec } from "$data/device";
+    import type { Feature } from "$data/api_types";
+
+
     import { value } from "$data/state";
     import Icon from "./Icon.svelte";
 
     export let deviceId: string;
-    export let spec: ValueSpec;
+    export let spec: Feature;
+    export let unit: string = '';
 
     let val = value(deviceId, spec.id);
-
-    let unit = '';
-
-    if (spec.kind.type === 'number') {
-        unit = spec.kind.unit ?? '';
-    }
 </script>
 
-{#if ('Err' in $val)} 
-    <div class="error" title={$val.Err}>
-        <div>{$val.Err}</div>
+{#if ('err' in $val)} 
+    <div class="error" title={$val.err}>
+        <div>{$val.err}</div>
     </div>  
-{:else if ($val.Ok === null)}
+{:else if ($val.ok === null)}
     <div class="value">N/A</div> 
 {:else}
 
-    {#if (spec.kind.type === 'bool')}
+    {#if (spec.kind === 'BOOL')}
         <div class="value icon">
-            <Icon name={$val.Ok ? 'toggle-right' : 'toggle-left' } size={20} />
+            <Icon name={$val.ok ? 'toggle-right' : 'toggle-left' } size={20} />
         </div>
     {:else}
         <div class="value">
-            {$val.Ok}
+            {$val.ok}
             {#if unit} 
             <span>{unit}</span>
             {/if}

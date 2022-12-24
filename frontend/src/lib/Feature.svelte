@@ -2,28 +2,31 @@
     import Icon from './Icon.svelte';
     import Colors, { Color } from '../data/colors';
     import Sparkline from './Sparkline.svelte';
-    import { type ValueSpec } from '$data/device';
-     import Value from './Value.svelte';
+    import Value from './Value.svelte';
+    import type { Feature } from '$data/api_types';
   
-    export let spec: ValueSpec;
+    export let spec: Feature;
     export let deviceId: string;
 
-    let color = Colors[spec.direction];
+    let color: Color;
     let icon: string;
 
     switch (spec.direction) {
-        case "sink": 
+        case "SINK": 
             icon = "stack-push";
+            color = Colors["sink"];
             break;
-        case "source":
+        case "SOURCE":
             icon = "stack-pop";
+            color = Colors["source"];
             break;
-        case "sourceSink":
+        case "SOURCE_SINK":
             icon = "stack";
+            color = Colors["sourceSink"]
             break;
     }
 
-    const showFeedback = spec.kind.type === 'number';
+    const showFeedback = spec.kind === 'NUMBER';
 
     let interval = (Math.random() * 3000) + 1000;
 
@@ -51,11 +54,11 @@
         </div>
     {/if}
     
-    {#if spec.direction !== "sink"}
+    {#if spec.direction !== "SINK"}
         <Value deviceId={deviceId} spec={spec} />
     {/if}
 
-    {#if spec.direction === 'sink' || spec.direction === 'sourceSink'}
+    {#if spec.direction === 'SINK' || spec.direction === 'SOURCE_SINK'}
 
     <div class="link">
         <a href={`#/device/${deviceId}/${spec.id}/automate`} title={`Automate ${spec.name}!`}>

@@ -77,9 +77,9 @@
         });
     }
 
-    $: color = kind.type === 'any' ? 
+    $: color = kind === 'ANY' ? 
         'linear-gradient(328deg, rgba(140,108,255,1) 10%, rgba(255,108,109,1) 90%)' : 
-        colors[kind.type].toString();
+        colors[kind.toLowerCase()].toString();
 
     // Update this slots anchor
     $: if (self) {
@@ -100,7 +100,7 @@
 
     $: if ($startedConnection) {
         canReceive = (
-            ($startedConnection.kind.type === kind.type || $startedConnection.kind.type === 'any' || kind.type === 'any') && // Same kind
+            ($startedConnection.kind === kind || $startedConnection.kind === 'ANY' || kind === 'ANY') && // Same kind
             ($startedConnection.start.nodeId !== id.nodeId) && // Not on the same node
             ($startedConnection.startDirection !== direction) && // Opposite directions
             (direction === 'output' || multiple || !pop(connections.get(id))) // Not full

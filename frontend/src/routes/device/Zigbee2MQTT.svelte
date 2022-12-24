@@ -5,8 +5,7 @@
 
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
-
-    import { pipe } from '$net/pipe';
+    import TextInput from '$lib/TextInput.svelte';
 
     let host: string;
     let password: string;
@@ -18,22 +17,7 @@
     let isEmpty = true;
     $: isEmpty = connected.length === 0;
 
-    async function changeSettings() {
-        $pipe({
-            topic: "device.add",
-            payload: {
-                id: `z2mqtt:${host}:${port}`,
-                name: `Zigbee2Mqtt (${host})`,
-                type: { type: "intergration", name: "zigbee2mqtt" },
-                task_spec: [{
-                    type: 'zigbee2Mqtt',
-                    host,
-                    port,
-                    username,
-                    password,
-                }]
-            }
-        })
+    async function changeSettings() {        
     }
 </script>
 
@@ -77,25 +61,14 @@
     <span slot="headline">Connect to Zigbee2MQTT</span>
     <div slot="content">
         <section class="form">
-            <div class="form-group">
-                <label for="input">MQTT server address</label>
-                <input id="input" bind:value={host} />
-            </div>
-        
-            <div class="form-group">
-                <label for="input">Username</label>
-                <input id="input" bind:value={username} />
-            </div>
-        
-            <div class="form-group">
-                <label for="input">Password</label>
-                <input id="input" bind:value={password} />
-            </div>
+            <TextInput label="MQTT server address" bind:value={host} />
+            <TextInput label="Username" bind:value={username} />
+            <TextInput label="Password" bind:value={password} />
         </section>
         
         <section class="menu">
             <SubMenu>
-                <button on:click={changeSettings} disabled={!$pipe}>
+                <button on:click={changeSettings}>
                     Connect
                 </button>
             </SubMenu>
@@ -113,40 +86,12 @@
         display: flex;
         justify-content: right;
     }
-  
-    .form-group {
-        display: flex;
-        overflow: hidden;
-        
-        padding: 0;
-        gap: 3px;
-    }
 
     .ledger {
         max-width: 1000px;
         display: flex;
         justify-content: end;
         margin-top: 24px;
-    }
-
-    label {
-        background-color: var(--feature);
-        padding: 8px;
-        display: flex;
-        align-items: center;
-        border-radius: 2px;
-        color: var(--strong);
-    }
-
-    input {
-        background-color: var(--container);
-        border: none;
-        outline: none;
-        padding: 8px;
-        flex-grow: 1;
-        color: #fafafa;
-        
-        border-radius: 2px;
     }
 
     .empty {

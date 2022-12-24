@@ -1,7 +1,10 @@
 import { writable, type Writable } from "svelte/store";
-import type { Device, Result, Value } from "./device";
+import Api from '$data/api';
+import type { Device } from "./api_types";
 
-type Message = Device | Value;
+type Result<T> =
+  { ok: T } |
+  { err: string };
 
 export const devicesMap = new Map<string, Device>();
 const valueStore = new Map<string, Writable<Result<number | string | null | boolean>>>();
@@ -16,11 +19,24 @@ export const value = (device: string, property: string) => {
   const key = `${device}/${property}`;
 
   if (!valueStore.has(key)) {
-    valueStore.set(key, writable({ Ok: null }));
+    valueStore.set(key, writable({ ok: null }));
   }
 
   return {
     subscribe: valueStore.get(key).subscribe
   }
 }
+
+async function onLoad() {
+  const devices = await (await Api.getAllDevices()).device;
+
+  devicesList.set(devices);
+
+  for (const device of devices) {
+    devicesMap.set(device.id, device);
+  }
+
+}
+
+onLoad();
 

@@ -1,10 +1,11 @@
 <script lang="ts">
     import { filter } from '$data/iterators';
-    import { type Device } from '$data/device';
+
     import Icon from './Icon.svelte';
     import Value from './Value.svelte';
     import Feature from './Feature.svelte';
-  import { fade } from 'svelte/transition';
+    import { fade } from 'svelte/transition';
+    import type { Device } from '$data/api_types';
 
     function slideNFade(node: Element, { delay = 0, duration = 400 }) {
         const o = +getComputedStyle(node).opacity;
@@ -13,7 +14,10 @@
         return {
             delay,
             duration,
-            css: (t: number) => `opacity: ${t * o}; margin-right: -${(1.0-t) * w}px`
+            css: (t: number) => `
+                opacity: ${t * o}; 
+                margin-right: -${(1.0-t) * w}px;
+            `
         };
     }
 
@@ -21,7 +25,7 @@
 
     const sources = Array.from(filter(
         device.features, 
-        f => f.direction === 'source' || f.direction === 'sourceSink'
+        f => f.direction === 'SOURCE' || f.direction === 'SOURCE_SINK'
     ));
 
     let open = false;

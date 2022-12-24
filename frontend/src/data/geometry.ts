@@ -17,7 +17,6 @@ export class Point {
         return a + b;
     }
 
-
     /**
      * Check if this Point and another Point are value equal
      * @param other Some other point

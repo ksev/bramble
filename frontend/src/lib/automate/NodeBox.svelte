@@ -6,19 +6,20 @@
     import Input from './Input.svelte';
     import colors from "$data/colors";
     import Icon from '$lib/Icon.svelte';
+    import { keyPressed } from '$data/keypressed';
   
     export let data: Node;
 
     const { layout, selected, pointer, blockPan } = automateContext();
     const rect = layout.get(data.id);
 
-    let selectedCount = selected.count;
+    let shift = keyPressed("Shift");
     let moving: SelectionMove; 
     let height = 0;
     let width = 0;
 
     function mouseDown() {
-        if (!isSelected) {
+        if (!isSelected && !$shift) {
             // This is the only non sticky selection which means we will de-select after move
             selected.selectOne(data, false);
         }
@@ -33,8 +34,17 @@
         if (!moving) return;
 
         if (!moving.hasMoved()) {
-            // We didn't move just clicked, narrow selection to this Node
-            selected.selectOne(data);
+            // We didn't move just clicked, narrow selection to this Node            
+            if (!$shift) {
+                // Exclusive selection 
+                selected.selectOne(data);                
+            } else if (isSelected) {
+                // Shift is pressed and we are selected then remove this from selection
+                selected.deselect(data);
+            } else {
+                // Shift is pressed we are not selected, extend selection with this
+                selected.select(data);
+            }
         } else {
             selected.deselectAll();
         }

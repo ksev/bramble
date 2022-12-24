@@ -1,5 +1,5 @@
 <script lang="ts">
-    import colors from "$data/colors";
+    import colors, { kindColor } from "$data/colors";
     import { automateContext } from "$data/automate/automate";
     import type { Connection } from "$data/automate/node";
 
@@ -10,7 +10,7 @@
     const inputSlot = nodes.getSlot(connection.to);
     const outputSlot = nodes.getSlot(connection.from);
 
-    const color = colors[outputSlot.kind.type];
+    const color = kindColor(outputSlot.kind);
     const first = anchors(connection.from);
     const last = anchors(connection.to);
     let offsetY = 0;

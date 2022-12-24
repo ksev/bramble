@@ -1,5 +1,5 @@
 <script lang="ts">
-    import colors from '$data/colors';
+    import colors, { kindColor } from '$data/colors';
     import { Color } from '$data/colors';
     import { get } from 'svelte/store';
     import { automateContext } from '$data/automate/automate';
@@ -14,7 +14,7 @@
     let d = "";
 
     $: if (data) {
-        color = colors[data.kind.type];
+        color = kindColor(data.kind);
 
         if (data.startDirection === 'output') {
             // Giving up reactivity here does not matter
