@@ -2,19 +2,19 @@
     import NodeBox from "$lib/automate/NodeBox.svelte";
 
     import { buildContext } from "$data/automate/automate";
-    import colors, { Color, directionColor } from "$data/colors";
+    import { directionColor } from "$data/colors";
     import { Extent, Point, Rect } from "$data/geometry";
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
     import { derived, writable } from "svelte/store";
     import { devicesMap } from "$data/state";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
-    import Icon from "$lib/Icon.svelte";
+    import TopMenu from "$lib/automate/TopMenu.svelte";
 
     export let params: {
-        deviceid: string,
-        property: string,
-    }
+        deviceid: string;
+        property: string;
+    };
 
     let editor: HTMLDivElement;
     let width = 0;
@@ -36,23 +36,17 @@
     let spaceDown = false;
     let grabbed = false;
 
-    function home() {
-        x = 0;
-        y = 0;
-        zoom = 1.0;
-    }
-
     const device = devicesMap.get(params.deviceid);
-    const feature = device.features.find(f => f.id === params.property);
+    const feature = device.features.find((f) => f.id === params.property);
 
     const rawPointer = writable<Point>(Point.ZERO);
 
-    const viewPointer = derived(rawPointer, p => {
+    const viewPointer = derived(rawPointer, (p) => {
         const box = editor?.getBoundingClientRect();
         return box ? new Point(p.x - box.x, p.y - box.y) : Point.ZERO;
     });
 
-    const pointer = derived(viewPointer, p => {
+    const pointer = derived(viewPointer, (p) => {
         return new Point(
             (p.x - (width / 2 + panX)) / zoom + axisSize,
             (p.y - (height / 2 + panY)) / zoom + axisSize
@@ -67,32 +61,39 @@
         selected,
         connections,
     } = buildContext(
-        [{
-            id: 0,
-            label: device.name,
-            color: directionColor(feature.direction),
-            icon: "settings-automation",
-            target: true,
-            inputs: [{
-                id: feature.id,
-                label: `${feature.name}`,
-                kind: feature.kind,
-                meta: feature.meta,
-            }],
-            outputs: [],
-        }],
-        [{
-            id: 0,
-            rect: Rect.numbers(
-                axisSize-100, 
-                axisSize-40, 
-                200, 
-                200
-            ),
-        }],// Downstream consumers should just be able to read
-        viewPointer, // Downstream consumers should just be able to read
-        pointer,
+        [
+            {
+                id: 0,
+                label: device.name,
+                color: directionColor(feature.direction),
+                icon: "settings-automation",
+                target: true,
+                inputs: [
+                    {
+                        id: feature.id,
+                        label: `${feature.name}`,
+                        kind: feature.kind,
+                        meta: feature.meta,
+                    },
+                ],
+                outputs: [],
+            },
+        ],
+        [
+            {
+                id: 0,
+                rect: Rect.numbers(axisSize - 100, axisSize - 40, 200, 200),
+            },
+        ], 
+        viewPointer,
+        pointer
     );
+
+    function home() {
+        x = 0;
+        y = 0;
+        zoom = 1.0;
+    }
 
     function wheel(e: WheelEvent) {
         const sens = 0.001;
@@ -101,14 +102,14 @@
 
     function keyDown(e: KeyboardEvent) {
         // If the event originates from an input, ignore it
-        if ((e.target as HTMLElement)?.nodeName === 'INPUT') return;
+        if ((e.target as HTMLElement)?.nodeName === "INPUT") return;
         if (e.key === " " && !$blockPan) spaceDown = true;
         if (e.ctrlKey && e.key === "a") selected.selectAll();
     }
 
     function keyUp(e: KeyboardEvent) {
         // If the event originates from an input, ignore it
-        if ((e.target as HTMLElement)?.nodeName === 'INPUT') return;
+        if ((e.target as HTMLElement)?.nodeName === "INPUT") return;
 
         if (e.key == " ") spaceDown = false;
 
@@ -130,7 +131,7 @@
 
     function mouseDown(e: MouseEvent) {
         if (spaceDown) {
-            grabbed = true
+            grabbed = true;
         } else {
             selectBoxOrigin = $viewPointer;
             blockPan.set(true);
@@ -170,22 +171,21 @@
                 height: ${box.size.height}px;
             `;
 
-            selected.boxSelect(new Rect(
-                new Point(
-                    (box.origin.x - (width / 2 + panX)) / zoom + axisSize,
-                    (box.origin.y - (height / 2 + panY)) / zoom + axisSize
-                ),
-                new Extent(
-                    box.size.width / zoom,
-                    box.size.height / zoom,
-                ),
-            ));
+            selected.boxSelect(
+                new Rect(
+                    new Point(
+                        (box.origin.x - (width / 2 + panX)) / zoom + axisSize,
+                        (box.origin.y - (height / 2 + panY)) / zoom + axisSize
+                    ),
+                    new Extent(box.size.width / zoom, box.size.height / zoom)
+                )
+            );
         }
 
         if (grabbed) {
             x += e.movementX;
             y += e.movementY;
-        };
+        }
     }
 
     $: {
@@ -193,7 +193,10 @@
         let hwidth = width / 2;
         let hheight = height / 2;
 
-        panX = Math.max(Math.min(realAxisSize - hwidth, x), -realAxisSize + hwidth);
+        panX = Math.max(
+            Math.min(realAxisSize - hwidth, x),
+            -realAxisSize + hwidth
+        );
 
         panY = Math.max(
             Math.min(realAxisSize - hheight, y),
@@ -212,78 +215,39 @@
     $: transform = `
         transform: 
             translate(${panX}px, ${panY}px) 
-            translate(calc(-50% + ${width / 2}px), calc(-50% + ${height / 2}px)) 
+            translate(calc(-50% + ${width / 2}px), calc(-50% + ${
+        height / 2
+    }px)) 
             scale(${zoom});
     `;
 </script>
 
-<svelte:window 
-    on:keydown={keyDown} 
-    on:keyup={keyUp} 
+<svelte:window
+    on:keydown={keyDown}
+    on:keyup={keyUp}
     on:mouseup={mouseUp}
-    on:mousemove={mouseMove} />
+    on:mousemove={mouseMove}
+/>
 
-<div class="node-editor"
-     bind:clientWidth={width}
-     bind:clientHeight={height}
-     bind:this={editor}
-     on:mousedown={mouseDown}
-     on:contextmenu={onContextMenu}
-     on:wheel|passive={wheel}
-     class:grabbed
-     class:grabenabled={spaceDown}>
-
-     <div class="top-menu">
-        <ul class="dropdown-menu">
-            <li>
-                Save
-            </li>
-            <li class="submenu">
-                Node
-                <ul>
-                    <li>Device</li>
-                </ul>         
-                <div class="chevron">
-                    <Icon name="chevron-down" color={colors.fadedtext} size={12} />           
-                </div>
-            </li>               
-            <li>
-                Action
-                <ul>
-                    <li>Device</li>
-                </ul>         
-                <div class="chevron">
-                    <Icon name="chevron-down" color={colors.fadedtext} size={12} />           
-                </div>
-            </li>
-        </ul>
-
-        <div class="right-group">
-            <ul class="dropdown-menu">
-                <li><Icon name="box-align-top" color={colors.fadedtext} size={18} /></li>
-                <li><Icon name="box-align-bottom" color={colors.fadedtext} size={18} /></li>
-                <li><Icon name="box-align-left" color={colors.fadedtext} size={18} /></li>
-                <li><Icon name="box-align-right" color={colors.fadedtext} size={18} /></li>
-            </ul>
-
-            <ul class="dropdown-menu">
-                <li on:click={home}><Icon name="home" color={colors.fadedtext} size={18} /></li>
-            </ul>
-
-            <div class="zoom-box">
-                <div class="plus" on:click={() => zoom += 0.1}>+</div>
-                <div class="value">{(zoom * 100).toFixed(0)}%</div>
-                <div class="minus" on:click={() => zoom -= 0.1}>-</div>
-            </div>
-        </div>
-     </div>
+<div
+    class="node-editor"
+    bind:clientWidth={width}
+    bind:clientHeight={height}
+    bind:this={editor}
+    on:mousedown={mouseDown}
+    on:contextmenu={onContextMenu}
+    on:wheel|passive={wheel}
+    class:grabbed
+    class:grabenabled={spaceDown}
+>
+    <TopMenu bind:zoom={zoom} on:home={home} />
 
     {#if $contextMenu}
         <ContextMenu />
     {/if}
 
-    {#if selectBox} 
-        <div class="selectbox" style={selectBox}></div>
+    {#if selectBox}
+        <div class="selectbox" style={selectBox} />
     {/if}
 
     <div class="grid" style={transform}>
@@ -293,16 +257,23 @@
 
         <svg viewBox="0 0 12000 12000" class="edges" on:mouseup|self={deselect}>
             <g>
-                <rect x="5993" y="5993"
-                      width="14" height="14"
-                      rx="2" fill="rgba(0,0,0,0.18)" />
+                <rect
+                    x="6003"
+                    y="6003"
+                    width="14"
+                    height="14"
+                    rx="2"
+                    fill="rgba(0,0,0,0.18)"
+                />
             </g>
 
-            <g stroke-width="6"
-               stroke-linecap="round"
-               stroke-linejoin="round"
-               fill="transparent"
-               style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));">
+            <g
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                fill="transparent"
+                style="filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.2));"
+            >
                 {#each $connections as c (`${c.from.toString()}->${c.to.toString()}`)}
                     <ConnectionLine connection={c} />
                 {/each}
@@ -332,12 +303,12 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        width: 100%; 
+        width: 100%;
     }
 
     .node-editor .grid {
         background-image: url(/grid.svg);
-        background-position: -60px -60px;
+        background-position: -50px -50px;
         width: 12000px;
         height: 12000px;
 
@@ -362,127 +333,9 @@
     }
 
     .selectbox {
-        background-color: rgba(0,0,0,0.05);
+        background-color: rgba(0, 0, 0, 0.05);
         position: absolute;
         border: 3px dashed var(--background);
         z-index: 50;
-    }
-
-    .top-menu {
-        z-index: 950;
-        padding: 12px;
-        background-color: rgba(31, 31, 51, 0.8);
-        color: var(--fadedtext);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .zoom-box {
-        display: inline-flex;
-        flex-direction: row;
-        gap: 3px;
-        background-color: var(--container);
-        border-radius: 4px;
-        overflow: hidden;
-        justify-content: center;
-        align-items: center;
-        padding: 2px;
-        height: 27px;
-    }
-
-    .zoom-box > div {
-        padding: 3px;
-        transition: 200ms background-color;
-    }
-
-    .zoom-box > .value {
-        width: 40px;
-        text-align: center;
-    }
-
-    .zoom-box > .plus, .zoom-box > .minus {
-        width: 20px;
-        text-align: center;
-        border-radius: 4px;
-    }
-
-    .zoom-box > .plus:hover, .zoom-box > .minus:hover {
-        background-color: var(--background);
-    }
-
-    .zoom-box > .plus:active, .zoom-box > .minus:active {
-        background-color: var(--container);
-    }
-
-    .dropdown-menu {
-        display: inline-flex;
-        gap: 1px;
-        
-        height: 27px;             
-    }
-
-    .dropdown-menu > li {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: var(--container);
-        padding: 0 9px;
-        gap: 6px;
-    }
-
-    .dropdown-menu > li:hover {
-        background-color: var(--containerhigh);
-    }
-
-    .dropdown-menu > li.submenu:hover {
-        background-color: var(--background);
-    }
-
-    .dropdown-menu > li:active {
-        background-color: var(--container);
-    }
-
-    .dropdown-menu > li > ul {
-        display: none;
-        background-color: var(--background);
-        width: 200px;
-        height: 200px;
-
-        position: absolute;
-        top: 27px;
-        left: 0;
-        z-index: 1000;
-        padding: 9px;
-
-        border-radius: 0 4px 4px 4px;
-    }
-
-    .dropdown-menu > li > .chevron {
-        margin-top: 2px; 
-        margin-right: -3px;
-    }
-
-    .dropdown-menu > li.submenu {
-        position: relative;
-    }
-
-    .dropdown-menu > li.submenu:hover > ul {
-        display: flex;        
-    }
-
-    .dropdown-menu > li:first-child {
-        border-radius: 4px 0 0 4px;
-    }
-
-    .dropdown-menu > li:last-child {
-        border-radius: 0 4px 4px 0;
-    }
-
-    .right-group {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 12px;
-    }
+    }    
 </style>

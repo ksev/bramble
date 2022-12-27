@@ -1,4 +1,3 @@
-
 <script lang="ts">
     import Icon from "$lib/Icon.svelte";
     import { automateContext } from "$data/automate/automate";

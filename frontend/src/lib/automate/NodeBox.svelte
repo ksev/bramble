@@ -62,7 +62,6 @@
     $: nodeStyle = `
         left: ${$rect.origin.x}px; 
         top: ${$rect.origin.y}px; 
-        width: ${$rect.size.width || 'auto'}px;
         --accent: ${data.color.alpha(1.0)};
         --body-background: ${colors.background.alpha(0.9)};
     `
@@ -73,8 +72,8 @@
 <svelte:window on:mousemove|passive={mouseMove} on:mouseup={mouseUp} />
 
 <div class="node" 
-     bind:clientHeight|once={height} 
-     bind:clientWidth|once={width}
+     bind:clientHeight={height} 
+     bind:clientWidth={width}
      on:mousedown={e => e.stopPropagation()}
      class:moving
      class:isSelected

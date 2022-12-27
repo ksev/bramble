@@ -211,15 +211,12 @@ export function nodeStore(ctx: Context, start: Node[]) {
             let p = get(ctx.pointer);
 
             const x = p.x - 100;
-            const y = p.y - 10;
+            const y = p.y - 14;
 
-            const origin = new Point(
-                Math.round(x/20) * 20,
-                Math.round(y/20) * 20,
-            );
+            const origin = new Point(x, y);
 
             // Make sure the Node spawn under the pointer 
-            // And is immidiately dragable
+            // And is immidiatly dragable
             ctx.layout.set(
                 id, 
                 layoutStore(
@@ -310,12 +307,18 @@ export function layoutStore(initialData: Rect) {
     const w = writable(initialData);
 
     return {
+        moveY: (y: number) => {
+            w.update(r => {
+                const x = r.origin.x;
+                return r.moveTo(new Point(x, y));
+            });
+        },
         move: (x: number, y: number) => {  
             let current = get(w);
 
             const origin = new Point(
-                Math.round(x/20) * 20,
-                Math.round(y/20) * 20,
+                Math.round(x),
+                Math.round(y),
             );
 
             if (current.origin.equals(origin)) {
@@ -328,8 +331,8 @@ export function layoutStore(initialData: Rect) {
             w.update(current =>  {
                 return current.resize(
                     new Extent(
-                        Math.ceil(width/20) * 20, 
-                        Math.ceil(height/20) * 20
+                        Math.ceil(width), 
+                        Math.ceil(height)
                     )
                 )
             });
