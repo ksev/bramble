@@ -10,12 +10,16 @@ pub struct Subscriber<T> {
 pub struct Subscription<T> {
     mutex: Arc<Mutex<SmallVec<[T; 1]>>>,
     notify: Arc<Notify>,
-    
+
     _guard: super::RemoveKey<T>,
 }
 
 impl<T> Subscription<T> {
-    pub fn new(shared: Arc<Mutex<SmallVec<[T; 1]>>>, notify: Arc<Notify>, guard: super::RemoveKey<T>) -> Subscription<T> {
+    pub fn new(
+        shared: Arc<Mutex<SmallVec<[T; 1]>>>,
+        notify: Arc<Notify>,
+        guard: super::RemoveKey<T>,
+    ) -> Subscription<T> {
         Subscription {
             mutex: shared,
             notify,

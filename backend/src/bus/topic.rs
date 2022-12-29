@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use futures::{Stream, stream};
+use futures::{stream, Stream};
 use slotmap::{DefaultKey, SlotMap};
 use smallvec::smallvec;
 use tokio::sync::Notify;
@@ -74,7 +74,7 @@ impl<T> Default for Topic<T> {
 
 pub struct RemoveKey<T> {
     subs: Arc<Mutex<SlotMap<DefaultKey, Subscriber<T>>>>,
-    key: DefaultKey
+    key: DefaultKey,
 }
 
 impl<T> Drop for RemoveKey<T> {

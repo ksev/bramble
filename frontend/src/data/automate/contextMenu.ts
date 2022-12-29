@@ -1,4 +1,5 @@
-import { devicesMap } from "$data/state";
+import { devices } from "$data/state";
+import { get } from "svelte/store";
 import type { Context } from "./automate";
 import { BOOL_LOGIC, deviceNode, isNull, NUMERIC_OPS, STATE_OPS } from "./node";
 
@@ -25,7 +26,9 @@ const BACK_ITEM: MenuItem = {
 function* collectDevices() {
     yield BACK_ITEM;
 
-    for (const device of devicesMap.values()) {
+    const d = get(devices.all());
+
+    for (const device of d) {
         yield {
             text: device.name,
             icon: "cpu",

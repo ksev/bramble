@@ -7,7 +7,7 @@
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
     import { derived, writable } from "svelte/store";
-    import { devicesMap } from "$data/state";
+    import { devices } from "$data/state";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
     import TopMenu from "$lib/automate/TopMenu.svelte";
 
@@ -36,7 +36,7 @@
     let spaceDown = false;
     let grabbed = false;
 
-    const device = devicesMap.get(params.deviceid);
+    const device = null;
     const feature = device.features.find((f) => f.id === params.property);
 
     const rawPointer = writable<Point>(Point.ZERO);

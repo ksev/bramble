@@ -7,10 +7,11 @@
     import SubMenu from '$lib/SubMenu.svelte';
     import Device from '$lib/Device.svelte';
 
-    import Colors from '$data/colors';
+    import Colors from '$data/colors';    
 
-    $: sorted = $devices.sort((a,b) => a.name.localeCompare(b.name));
-    $: empty = $devices.length === 0;
+    const all = devices.all();
+
+    $: empty = $all.length === 0;
 </script>
 
 <div>
@@ -63,7 +64,7 @@
                     Add one in the menu above!
                 </span>
             {:else}
-                {#each sorted as device (device.id)}
+                {#each $all as device (device.id)}
                     <Device device={device} />
                 {/each}
             {/if}

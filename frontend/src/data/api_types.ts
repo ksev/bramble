@@ -1,5 +1,4 @@
-import { GraphQLClient } from 'graphql-request';
-import * as Dom from 'graphql-request/dist/types.dom';
+import { type DocumentNode } from 'graphql';
 import gql from 'graphql-tag';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -212,28 +211,23 @@ export const DeviceUpdatesDocument = gql`
   }
 }
     `;
-
-export type SdkFunctionWrapper = <T>(action: (requestHeaders?:Record<string, string>) => Promise<T>, operationName: string, operationType?: string) => Promise<T>;
-
-
-const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationType) => action();
-
-export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
+export type Requester<C = {}, E = unknown> = <R, V>(doc: DocumentNode, vars?: V, options?: C) => Promise<R> | AsyncIterable<R>
+export function getSdk<C, E>(requester: Requester<C, E>) {
   return {
-    getAllDevices(variables?: GetAllDevicesQueryVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<GetAllDevicesQuery> {
-      return withWrapper((wrappedRequestHeaders) => client.request<GetAllDevicesQuery>(GetAllDevicesDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'getAllDevices', 'query');
+    getAllDevices(variables?: GetAllDevicesQueryVariables, options?: C): Promise<GetAllDevicesQuery> {
+      return requester<GetAllDevicesQuery, GetAllDevicesQueryVariables>(GetAllDevicesDocument, variables, options) as Promise<GetAllDevicesQuery>;
     },
-    getDevice(variables: GetDeviceQueryVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<GetDeviceQuery> {
-      return withWrapper((wrappedRequestHeaders) => client.request<GetDeviceQuery>(GetDeviceDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'getDevice', 'query');
+    getDevice(variables: GetDeviceQueryVariables, options?: C): Promise<GetDeviceQuery> {
+      return requester<GetDeviceQuery, GetDeviceQueryVariables>(GetDeviceDocument, variables, options) as Promise<GetDeviceQuery>;
     },
-    createGenericDevice(variables: CreateGenericDeviceMutationVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<CreateGenericDeviceMutation> {
-      return withWrapper((wrappedRequestHeaders) => client.request<CreateGenericDeviceMutation>(CreateGenericDeviceDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'createGenericDevice', 'mutation');
+    createGenericDevice(variables: CreateGenericDeviceMutationVariables, options?: C): Promise<CreateGenericDeviceMutation> {
+      return requester<CreateGenericDeviceMutation, CreateGenericDeviceMutationVariables>(CreateGenericDeviceDocument, variables, options) as Promise<CreateGenericDeviceMutation>;
     },
-    createValueBuffer(variables: CreateValueBufferMutationVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<CreateValueBufferMutation> {
-      return withWrapper((wrappedRequestHeaders) => client.request<CreateValueBufferMutation>(CreateValueBufferDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'createValueBuffer', 'mutation');
+    createValueBuffer(variables: CreateValueBufferMutationVariables, options?: C): Promise<CreateValueBufferMutation> {
+      return requester<CreateValueBufferMutation, CreateValueBufferMutationVariables>(CreateValueBufferDocument, variables, options) as Promise<CreateValueBufferMutation>;
     },
-    deviceUpdates(variables?: DeviceUpdatesSubscriptionVariables, requestHeaders?: Dom.RequestInit["headers"]): Promise<DeviceUpdatesSubscription> {
-      return withWrapper((wrappedRequestHeaders) => client.request<DeviceUpdatesSubscription>(DeviceUpdatesDocument, variables, {...requestHeaders, ...wrappedRequestHeaders}), 'deviceUpdates', 'subscription');
+    deviceUpdates(variables?: DeviceUpdatesSubscriptionVariables, options?: C): AsyncIterable<DeviceUpdatesSubscription> {
+      return requester<DeviceUpdatesSubscription, DeviceUpdatesSubscriptionVariables>(DeviceUpdatesDocument, variables, options) as AsyncIterable<DeviceUpdatesSubscription>;
     }
   };
 }
