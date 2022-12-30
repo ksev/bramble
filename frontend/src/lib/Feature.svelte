@@ -3,7 +3,7 @@
     import Colors, { Color } from '../data/colors';
     import Sparkline from './Sparkline.svelte';
     import Value from './Value.svelte';
-    import type { Feature } from '$data/api_types';
+    import type { Feature } from '$data/api';
   
     export let spec: Feature;
     export let deviceId: string;
@@ -55,7 +55,7 @@
     {/if}
     
     {#if spec.direction !== "SINK"}
-        <Value deviceId={deviceId} spec={spec} />
+        <Value deviceId={deviceId} spec={spec} unit={spec.meta?.unit} />
     {/if}
 
     {#if spec.direction === 'SINK' || spec.direction === 'SOURCE_SINK'}

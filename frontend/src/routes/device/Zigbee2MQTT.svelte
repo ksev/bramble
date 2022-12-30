@@ -6,6 +6,7 @@
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
     import TextInput from '$lib/TextInput.svelte';
+    import Api from '$data/api';
 
     let host: string;
     let password: string;
@@ -17,7 +18,17 @@
     let isEmpty = true;
     $: isEmpty = connected.length === 0;
 
-    async function changeSettings() {        
+    async function connect() {
+        try {
+            await Api.addZigbee2MqttIntegration({
+                host,
+                port,
+                username,
+                password
+            })
+        } catch (e) {
+            console.error(e);
+        } 
     }
 </script>
 
@@ -68,7 +79,7 @@
         
         <section class="menu">
             <SubMenu>
-                <button on:click={changeSettings}>
+                <button on:click={connect}>
                     Connect
                 </button>
             </SubMenu>

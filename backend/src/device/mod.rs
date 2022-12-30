@@ -18,13 +18,13 @@ pub use feature::*;
 pub struct DeviceBus {
     /// Publish on this topic to subscribe to a MQTT topic on the specified server
     pub add: Topic<Arc<Device>>,
-    pub value: Topic<(String, String, Result<serde_json::Value, String>)>,
+    pub value: Topic<(String, String, FeatureValue)>,
 }
 
 /// Restore all devices tasks on restart
 pub async fn restore(mut t: Task) -> Result<()> {
-    let conn = db::pool().await;
-    let mut devices = Device::all(conn);
+    let mut conn = db::connection().await?;
+    let mut devices = Device::all(&mut conn);
 
     while let Some(device) = devices.try_next().await? {
         device.spawn_tasks(&mut t);

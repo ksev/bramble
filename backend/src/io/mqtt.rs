@@ -22,6 +22,23 @@ pub struct MqttServerInfo {
     pub password: Option<String>,
 }
 
+impl MqttServerInfo {
+    /// Create a new MqttServerInfo struct
+    pub fn new(
+        host: String,
+        port: u16,
+        username: Option<String>,
+        password: Option<String>,
+    ) -> MqttServerInfo {
+        MqttServerInfo {
+            host,
+            port,
+            username,
+            password,
+        }
+    }
+}
+
 impl std::cmp::PartialEq for MqttServerInfo {
     fn eq(&self, other: &Self) -> bool {
         self.host == other.host && self.port == other.port
@@ -85,7 +102,7 @@ pub async fn manage_connections(_: Task) -> Result<()> {
         }
     }
 
-   Ok(())
+    Ok(())
 }
 
 async fn connect(server_info: &MqttServerInfo) -> Result<(AsyncClient, EventLoop)> {

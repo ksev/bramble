@@ -3,11 +3,12 @@ use std::{collections::BTreeMap, sync::Arc};
 use futures::TryStreamExt;
 
 use anyhow::Result;
-use async_graphql::{Object, Schema, SimpleObject, Subscription};
+use async_graphql::{Context, Object, Schema, SimpleObject, Subscription};
 use futures::{Stream, StreamExt};
-use uuid::Uuid;
 
-use crate::{bus::BUS, db};
+use crate::{
+    bus::BUS, db, device::SOURCES, integration::zigbee2mqtt, io::mqtt::MqttServerInfo, task::Task,
+};
 
 pub struct Query;
 
@@ -15,19 +16,15 @@ pub struct Query;
 impl Query {
     /// Get all or a specific device
     async fn device(&self, id: Option<String>) -> Result<Vec<Device>> {
-        let pool = crate::db::pool().await;
+        let mut conn = db::connection().await?;
 
         if let Some(id) = id {
-            let device = crate::device::Device::load_by_id(&id, pool).await?;
+            let device = crate::device::Device::load_by_id(&id, &mut conn).await?;
 
-            Ok(vec![Device {
-                inner: DeviceInner::Owned(device),
-            }])
+            Ok(vec![device.into()])
         } else {
-            let vec = crate::device::Device::all(pool)
-                .map_ok(|d| Device {
-                    inner: DeviceInner::Owned(d),
-                })
+            let vec = crate::device::Device::all(&mut conn)
+                .map_ok(|d| d.into())
                 .try_collect()
                 .await?;
 
@@ -36,15 +33,61 @@ impl Query {
     }
 }
 
+// This is just not to poulte this namespace with a bunch of short super generic symbols
+mod inner_value {
+    use async_graphql::{Object, Union};
+
+    use crate::device::FeatureValue;
+
+    pub struct Ok {
+        value: serde_json::Value,
+    }
+
+    #[Object]
+    impl Ok {
+        async fn value(&self) -> &'_ serde_json::Value {
+            &self.value
+        }
+    }
+
+    pub struct Err {
+        value: String,
+    }
+
+    #[Object]
+    impl Err {
+        async fn message(&self) -> &'_ str {
+            &self.value
+        }
+    }
+
+    #[derive(Union)]
+    pub enum Value {
+        Ok(Ok),
+        Err(Err),
+    }
+
+    impl From<FeatureValue> for Value {
+        fn from(fv: FeatureValue) -> Self {
+            match fv {
+                Ok(value) => Value::Ok(Ok { value }),
+                Err(value) => Value::Err(Err { value }),
+            }
+        }
+    }
+}
+
+use inner_value::Value;
+
 #[derive(SimpleObject)]
 /// A value of a device that has been reported to the system
-struct Value {
+struct ValueUpdate {
     /// The id of the device the value is for
     device: String,
     /// The feature's name on the device the value is for
     feature: String,
     /// The value of the device, note can be error
-    value: Result<serde_json::Value, String>,
+    value: Value,
 }
 
 /// A device added to the system
@@ -55,6 +98,22 @@ struct Device {
 enum DeviceInner {
     Arc(Arc<crate::device::Device>),
     Owned(crate::device::Device),
+}
+
+impl From<crate::device::Device> for Device {
+    fn from(d: crate::device::Device) -> Self {
+        Device {
+            inner: DeviceInner::Owned(d),
+        }
+    }
+}
+
+impl From<Arc<crate::device::Device>> for Device {
+    fn from(d: Arc<crate::device::Device>) -> Self {
+        Device {
+            inner: DeviceInner::Arc(d),
+        }
+    }
 }
 
 impl Device {
@@ -82,10 +141,11 @@ impl Device {
     }
     /// All the features a device exposes
     async fn features(&self) -> Result<Vec<Feature>> {
-        let conn = db::pool().await;
+        let mut conn = db::connection().await?;
+        let device_id = &self.borrow().id;
 
-        let vec = crate::device::Feature::load_by_device(&self.borrow().id, conn)
-            .map_ok(|inner| Feature { inner })
+        let vec = crate::device::Feature::load_by_device(device_id, &mut conn)
+            .map_ok(|inner| Feature { device_id, inner })
             .try_collect()
             .await?;
 
@@ -93,12 +153,13 @@ impl Device {
     }
 }
 
-struct Feature {
+struct Feature<'a> {
+    device_id: &'a str,
     inner: crate::device::Feature,
 }
 
 #[Object]
-impl Feature {
+impl<'a> Feature<'a> {
     /// Feature id these are only device unique not global unique
     async fn id(&self) -> &'_ str {
         &self.inner.id
@@ -120,6 +181,12 @@ impl Feature {
     async fn meta(&self) -> &BTreeMap<String, serde_json::Value> {
         &self.inner.meta
     }
+    /// The current value of the feature, ONLY source features will have a value
+    async fn value(&self) -> Option<Value> {
+        SOURCES
+            .get(&(self.device_id.into(), self.inner.id.clone()))
+            .map(|r| r.clone().into())
+    }
 }
 
 pub struct Mutation;
@@ -129,23 +196,10 @@ impl Mutation {
     /// Create a new generic virtual device, this is just a recepticle to
     /// attach value buffers to
     async fn generic_device(&self, name: String) -> Result<String> {
-        let id = Uuid::new_v4().to_string();
+        let mut conn = db::connection().await?;
+        let dev = crate::device::Device::create_generic(name, &mut conn).await?;
 
-        let conn = db::pool().await;
-
-        let device = crate::device::Device {
-            id: id.clone(),
-            name,
-            device_type: crate::device::DeviceType::Virtual {
-                vty: crate::device::VirtualType::Generic,
-            },
-            parent: None,
-            task_spec: vec![],
-        };
-
-        device.save(conn).await?;
-
-        Ok(id)
+        Ok(dev.id.clone())
     }
     /// Create a value buffer on the target device
     /// this device must exist
@@ -156,21 +210,35 @@ impl Mutation {
         kind: crate::device::ValueKind,
         meta: Option<BTreeMap<String, serde_json::Value>>,
     ) -> Result<String> {
-        let id = Uuid::new_v4().to_string();
+        let mut conn = db::connection().await?;
 
-        let conn = db::pool().await;
-
-        let feature = crate::device::Feature {
-            id: id.clone(),
+        let feature = crate::device::Feature::attach_virtual(
+            &device_id,
             name,
-            direction: crate::device::ValueDirection::SourceSink,
             kind,
-            meta: meta.unwrap_or_default(),
-        };
+            meta.unwrap_or_default(),
+            &mut conn,
+        )
+        .await?;
 
-        feature.save(&device_id, conn).await?;
+        Ok(feature.id)
+    }
+    /// Add Zigbee2Mqtt integration
+    async fn zigbee_2_mqtt<'c>(
+        &self,
+        ctx: &Context<'c>,
+        host: String,
+        port: Option<u16>,
+        username: Option<String>,
+        password: Option<String>,
+    ) -> Result<Device> {
+        let server_info = MqttServerInfo::new(host, port.unwrap_or(1883), username, password);
+        let mut conn = db::connection().await?;
 
-        Ok(id)
+        let task = ctx.data_unchecked::<Task>();
+        let device = zigbee2mqtt::create_integration_device(server_info, task, &mut conn).await?;
+
+        Ok(device.into())
     }
 }
 
@@ -180,21 +248,19 @@ pub struct Subscription;
 impl Subscription {
     /// Listen for updates to feature values on devices
     /// This will print out all updates on all devices
-    async fn values(&self) -> impl Stream<Item = Value> {
+    async fn values(&self) -> impl Stream<Item = ValueUpdate> {
         tracing::debug!("GraphQL subscribe values");
-        BUS.device.value.subscribe().map(|(d, p, v)| Value {
+        BUS.device.value.subscribe().map(|(d, p, v)| ValueUpdate {
             device: d,
             feature: p,
-            value: v,
+            value: v.into(),
         })
     }
 
     /// Listen for changes in devices
     async fn device(&self) -> impl Stream<Item = Device> {
         tracing::debug!("GraphQL subscribe device updates");
-        BUS.device.add.subscribe().map(|d| Device {
-            inner: DeviceInner::Arc(d.clone()),
-        })
+        BUS.device.add.subscribe().map(|d| d.into())
     }
 }
 

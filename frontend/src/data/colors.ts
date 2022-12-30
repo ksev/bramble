@@ -1,5 +1,5 @@
 import Color from 'color';
-import { ValueKind } from './api_types';
+import { ValueKind } from './api-gen/api_types';
 
 const colors = {
     background: Color("#1f1f33"),

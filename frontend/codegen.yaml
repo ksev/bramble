@@ -1,9 +1,9 @@
 generates:
-  src/data/api_types.ts:
+  src/data/api-gen/api_types.ts:
     overwrite: true
     schema: "http://127.0.0.1:8080/api"
     documents: 
-      - src/data/graphql_queries.ts
+      - src/data/api-gen/graphql_queries.ts
     plugins:
       - typescript
       - typescript-operations

@@ -1,21 +1,21 @@
-use dashmap::{DashMap, mapref::multiple::RefMulti};
+use dashmap::{DashMap, mapref::one::Ref};
 use once_cell::sync::Lazy;
 use tracing::debug;
 
 use crate::bus::BUS;
 
-pub static SOURCES: Lazy<Sources> = Lazy::new(Sources::default);
+use super::FeatureValue;
 
-type Value = Result<serde_json::Value, String>;
+pub static SOURCES: Lazy<Sources> = Lazy::new(Sources::default);
 
 /// Sources a struct that keeps all the current values from all the sources the application know about
 #[derive(Default)]
 pub struct Sources {
-    storage: DashMap<(String, String), Value>,
+    storage: DashMap<(String, String), FeatureValue>,
 }
 
 impl Sources {
-    pub fn set(&self, key: (String, String), value: Result<serde_json::Value, String>) {
+    pub fn set(&self, key: (String, String), value: FeatureValue) {
         let same = if let Some(current) = self.storage.get(&key) {
             *current == value
         } else {
@@ -25,13 +25,21 @@ impl Sources {
         if !same {
             debug!("{:?} update source {:?}", key, value);
 
-            BUS.device.value.publish((key.0.clone(), key.1.clone(), value.clone()));
+            BUS.device
+                .value
+                .publish((key.0.clone(), key.1.clone(), value.clone()));
 
             self.storage.insert(key, value);
         }
     }
 
+    pub fn get(&self, key: &(String, String)) -> Option<Ref<(String, String), FeatureValue>> {
+        self.storage.get(key)
+    }
+
+    /*
     pub fn all(&self) -> impl Iterator<Item = RefMulti<'_, (String, String), Value>> {
         self.storage.iter()
     }
+     */
 }

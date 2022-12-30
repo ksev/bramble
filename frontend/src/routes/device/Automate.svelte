@@ -2,14 +2,14 @@
     import NodeBox from "$lib/automate/NodeBox.svelte";
 
     import { buildContext } from "$data/automate/automate";
-    import { directionColor } from "$data/colors";
     import { Extent, Point, Rect } from "$data/geometry";
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
     import { derived, writable } from "svelte/store";
-    import { devices } from "$data/state";
+    import { devices } from "$data/devices";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
     import TopMenu from "$lib/automate/TopMenu.svelte";
+    import { automationTarget } from "$data/automate/node";
 
     export let params: {
         deviceid: string;
@@ -36,9 +36,6 @@
     let spaceDown = false;
     let grabbed = false;
 
-    const device = null;
-    const feature = device.features.find((f) => f.id === params.property);
-
     const rawPointer = writable<Point>(Point.ZERO);
 
     const viewPointer = derived(rawPointer, (p) => {
@@ -61,30 +58,6 @@
         selected,
         connections,
     } = buildContext(
-        [
-            {
-                id: 0,
-                label: device.name,
-                color: directionColor(feature.direction),
-                icon: "settings-automation",
-                target: true,
-                inputs: [
-                    {
-                        id: feature.id,
-                        label: `${feature.name}`,
-                        kind: feature.kind,
-                        meta: feature.meta,
-                    },
-                ],
-                outputs: [],
-            },
-        ],
-        [
-            {
-                id: 0,
-                rect: Rect.numbers(axisSize - 100, axisSize - 40, 200, 200),
-            },
-        ], 
         viewPointer,
         pointer
     );
@@ -188,6 +161,14 @@
         }
     }
 
+    async function resolveDevice() {
+        const device = await devices.byId(params.deviceid);
+        const feature = device.features.find((f) => f.id === params.property);
+        nodes.add(automationTarget(device.name, feature), new Point(6010, 6010));
+    }
+
+    resolveDevice();
+
     $: {
         let realAxisSize = axisSize * zoom;
         let hwidth = width / 2;
@@ -215,9 +196,7 @@
     $: transform = `
         transform: 
             translate(${panX}px, ${panY}px) 
-            translate(calc(-50% + ${width / 2}px), calc(-50% + ${
-        height / 2
-    }px)) 
+            translate(calc(-50% + ${width / 2}px), calc(-50% + ${height / 2}px)) 
             scale(${zoom});
     `;
 </script>

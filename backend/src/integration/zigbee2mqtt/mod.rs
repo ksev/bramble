@@ -8,15 +8,41 @@ use bytes::Buf;
 pub use device::*;
 use futures::{StreamExt, TryStreamExt};
 use serde_json::Value;
+use sqlx::SqliteConnection;
 use tracing::error;
 
 use crate::{
     bus::BUS,
     db,
-    device::{TaskSpec, SOURCES},
+    device::{TaskSpec, SOURCES, FeatureValue},
     io::mqtt::{MqttServerInfo, MqttSubscribe},
     task::Task,
 };
+
+pub async fn create_integration_device(
+    server_info: MqttServerInfo,
+    task: &Task,
+    conn: &mut SqliteConnection,
+) -> Result<Arc<crate::device::Device>> {
+    let device = crate::device::Device {
+        id: format!("z2mqtt:{}:{}", server_info.host, server_info.port),
+        name: format!("Zigbee2Mqtt ({}:{})", server_info.host, server_info.port),
+        device_type: crate::device::DeviceType::Integration {
+            name: "zigbee2mqtt".into(),
+        },
+        parent: None,
+        task_spec: vec![TaskSpec::Zigbee2Mqtt(server_info)],
+    };
+
+    device.save(conn).await?;
+    device.spawn_tasks(task);
+
+    let device = Arc::new(device);
+
+    device.clone().notify_changed();
+
+    Ok(device)
+}
 
 pub async fn zigbee2mqtt_update(
     (parent, server): (String, MqttServerInfo),
@@ -39,7 +65,7 @@ pub async fn zigbee2mqtt_update(
                 .into_iter()
                 .filter_map(|d| d.into_device(&parent, server.clone()));
 
-            let mut tx = db::pool().await.begin().await?;
+            let mut tx = db::begin().await?;
 
             for (device, features) in iter {
                 // Persist the device
@@ -62,12 +88,13 @@ pub async fn zigbee2mqtt_update(
 }
 
 pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
+    // Get the devices and their features from the database
     let (device, features) = {
         use crate::device::{Device, Feature};
 
-        let pool = db::pool().await;
-        let device = Device::load_by_id(&device_id, pool).await?;
-        let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, pool)
+        let mut conn = db::connection().await?;
+        let device = Device::load_by_id(&device_id, &mut conn).await?;
+        let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, &mut conn)
             .try_collect()
             .await?;
 
@@ -80,8 +107,10 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
         anyhow::bail!("zigbee2mqtt_device did not get a task spec it expected, this is a bug");
     };
 
+    // Subscribe to all messages we receive from MQTT servers
     let mut channel = BUS.mqtt.published.subscribe();
 
+    // Tell the MQTT worker that we want to subscribe to a server and topic
     BUS.mqtt.subscribe.publish(subscribe.clone());
 
     while let Some((topic, data)) = channel.next().await {
@@ -104,7 +133,7 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
 
             let Some(mut value) = json.pointer(ptr) else {
                 // Set error in Sensor map
-                let v = Err(format!("Invalid JSON pointer {}\n{:#?}", ptr, json));
+                let v = FeatureValue::Err(format!("Invalid JSON pointer {}\n{:#?}", ptr, json));
                 SOURCES.set(key, v);
                 continue;
             };
@@ -113,12 +142,12 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
             // if the base value is not already a boolean
             if spec.kind == crate::device::ValueKind::Bool && !value.is_boolean() {
                 let Some(on) = spec.meta.get("value_on") else {
-                    let v = Err("meta value 'value_on' required for binary device".into());
+                    let v = FeatureValue::Err("meta value 'value_on' required for binary device".into());
                     SOURCES.set(key, v);
                     continue;
                 };
                 let Some(off) = spec.meta.get("value_off") else {
-                    let v = Err("meta value 'value_off' required for binary device".into());
+                    let v = FeatureValue::Err("meta value 'value_off' required for binary device".into());
                     SOURCES.set(key, v);
                     continue;
                 };

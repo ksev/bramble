@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ValueKind } from "$data/api_types";
+    import { ValueKind } from "$data/api";
     import { automateContext } from "$data/automate/automate";
     import type { Slot, SlotRef } from "$data/automate/node";
 

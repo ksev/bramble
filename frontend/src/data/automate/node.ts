@@ -1,5 +1,6 @@
-import colors, { Color } from "$data/colors";
-import type { Device, ValueKind } from "$data/device";
+import type { Feature } from "$data/api";
+import colors, { Color, directionColor } from "$data/colors";
+import { ValueKind, type Device } from "$data/api";
 import NumberCompare from "$lib/automate/settings/NumberCompare.svelte";
 import StateCompare from "$lib/automate/settings/StateCompare.svelte";
 import { SvelteComponentTyped,  type ComponentProps, type ComponentType } from "svelte";
@@ -37,7 +38,7 @@ export type NodePrototype = Omit<Node, "id">;
 export interface Slot {
     id: string,
     label: string,
-    kind: ValueKind,
+    kind: ValueKind | "ANY",
     multiple?: boolean,
     default?: number | string | boolean,
     meta?: Record<string, any>
@@ -70,7 +71,23 @@ export interface IncompleteConnection {
     over?: SlotRef
 };
 
-export function isNull(ctx: Context, inputKind: ValueKind = "ANY"): NodePrototype {
+export const automationTarget = (name: string, feature: Feature): NodePrototype  => ({
+    label: name,
+    color: directionColor(feature.direction),
+    icon: "settings-automation",
+    target: true,
+    inputs: [
+        {
+            id: feature.id,
+            label: `${feature.name}`,
+            kind: feature.kind,
+            meta: feature.meta,
+        },
+    ],
+    outputs: [],
+})
+
+export function isNull(ctx: Context, inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
     return {
         label: "Is null",
         icon: "bolt-off",
@@ -102,7 +119,7 @@ export function isNull(ctx: Context, inputKind: ValueKind = "ANY"): NodePrototyp
         outputs: [{
             id: "output",
             label: "Result",
-            kind: "BOOL"
+            kind: ValueKind.Bool
         }]
     }
 }
@@ -115,13 +132,13 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
             multiple: true,
         }],
         outputs: [{
             id: "output",
             label: "Result",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }]
     },
     or: {
@@ -131,13 +148,13 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
             multiple: true,
         }],
         outputs: [{
             id: "output",
             label: "Result",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }]
     },
     xor: {
@@ -147,13 +164,13 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
             multiple: true,
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }]
     },
     not: {
@@ -163,12 +180,12 @@ export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
         inputs: [{
             id: "input",
             label: "Input",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }]
     }
 }
@@ -183,19 +200,19 @@ export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
             {
                 id: "a",
                 label: "A",
-                kind: "NUMBER"
+                kind: ValueKind.Number
             },
             {
                 id: "b",
                 label: "B",
                 default: 1,
-                kind: "NUMBER",
+                kind: ValueKind.Number,
             },
         ],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }]
     },
     max: {
@@ -206,12 +223,12 @@ export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
             id: "input",
             label: "Input",
             multiple: true,
-            kind: "NUMBER",
+            kind: ValueKind.Number,
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: "NUMBER",
+            kind: ValueKind.Number,
         }]
     },
     min: {
@@ -222,12 +239,12 @@ export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
             id: "input",
             label: "Input",
             multiple: true,
-            kind: "NUMBER",
+            kind: ValueKind.Number,
         }],
         outputs: [{
             id: "result",
             label: "Result",
-            kind: "NUMBER",
+            kind: ValueKind.Number,
         }]
     },
 }
@@ -263,7 +280,7 @@ export const STATE_OPS = {
             {
                 id: "input",
                 label: "Input",
-                kind: "STATE",
+                kind: ValueKind.State,
                 meta: {
                     possible,
                 }
@@ -272,7 +289,7 @@ export const STATE_OPS = {
         outputs: [{
             id: "result",
             label: "Result",
-            kind: "BOOL",
+            kind: ValueKind.Bool,
         }]
     })
 }

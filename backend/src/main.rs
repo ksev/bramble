@@ -21,8 +21,6 @@ async fn main() -> Result<()> {
         std::env::set_var("RUST_LOG", "backend=debug,tokio=error,runtime=error")
     }
 
-    let _ = db::pool().await;
-
     tracing_subscriber::fmt::init();
 
     task::create_group(init).complete().await?;

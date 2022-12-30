@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use futures::Stream;
 use serde_derive::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteExecutor};
+use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteConnection};
+use uuid::Uuid;
 
-use crate::task::Task;
+use crate::{bus::BUS, task::Task};
 
 use super::TaskSpec;
 
@@ -22,7 +25,7 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn spawn_tasks(&self, task: &mut Task) {
+    pub fn spawn_tasks(&self, task: &Task) {
         for spec in &self.task_spec {
             match spec {
                 TaskSpec::Zigbee2Mqtt(server) => {
@@ -53,26 +56,22 @@ impl Device {
     }
 
     /// Save the device to storage
-    pub async fn save<'a, E>(&'a self, tx: E) -> Result<()>
-    where
-        E: SqliteExecutor<'a>,
-    {
+    pub async fn save(&self, conn: &mut SqliteConnection) -> Result<()> {
         sqlx::query(include_str!("../../sql/device_insert.sql"))
             .bind(&self.id)
             .bind(&self.name)
             .bind(Json(&self.device_type))
             .bind(&self.parent)
             .bind(Json(&self.task_spec))
-            .execute(tx)
+            .execute(conn)
             .await?;
 
         Ok(())
     }
 
-    pub fn all<'a, E>(tx: E) -> impl Stream<Item = Result<Device, sqlx::Error>> + 'a
-    where
-        E: SqliteExecutor<'a> + 'a,
-    {
+    pub fn all(
+        conn: &mut SqliteConnection,
+    ) -> impl Stream<Item = Result<Device, sqlx::Error>> + '_ {
         sqlx::query(include_str!("../../sql/device_all.sql"))
             .try_map(|row: SqliteRow| {
                 let Json(task_spec): Json<Vec<TaskSpec>> = row.try_get("task_spec")?;
@@ -86,13 +85,10 @@ impl Device {
                     task_spec,
                 })
             })
-            .fetch(tx)
+            .fetch(conn)
     }
 
-    pub async fn load_by_id<'a, E>(device_id: &str, tx: E) -> Result<Device>
-    where
-        E: SqliteExecutor<'a>,
-    {
+    pub async fn load_by_id(device_id: &str, conn: &mut SqliteConnection) -> Result<Device> {
         let dev = sqlx::query(include_str!("../../sql/device_by_id.sql"))
             .bind(device_id)
             .try_map(|row: SqliteRow| {
@@ -107,10 +103,38 @@ impl Device {
                     task_spec,
                 })
             })
-            .fetch_one(tx)
+            .fetch_one(conn)
             .await?;
 
         Ok(dev)
+    }
+
+    /// High level call to create a generic device save to database and notify on the device bus that a device was added
+    pub async fn create_generic(name: String, conn: &mut SqliteConnection) -> Result<Arc<Device>> {
+        let id = Uuid::new_v4().to_string();
+
+        let device = Device {
+            id,
+            name,
+            device_type: DeviceType::Virtual {
+                vty: VirtualType::Generic,
+            },
+            parent: None,
+            task_spec: vec![],
+        };
+
+        device.save(conn).await?;
+
+        let shared = Arc::new(device);
+
+        shared.clone().notify_changed();
+
+        Ok(shared)
+    }
+
+    /// Notify that this device has changed
+    pub fn notify_changed(self: Arc<Self>) {
+        BUS.device.add.publish(self)
     }
 }
 

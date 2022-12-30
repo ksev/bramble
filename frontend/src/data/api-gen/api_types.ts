@@ -1,4 +1,4 @@
-import { type DocumentNode } from 'graphql';
+import type { DocumentNode } from 'graphql';
 import gql from 'graphql-tag';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
@@ -28,6 +28,11 @@ export type Device = {
   parent?: Maybe<Scalars['String']>;
 };
 
+export type Err = {
+  __typename?: 'Err';
+  message: Scalars['String'];
+};
+
 export type Feature = {
   __typename?: 'Feature';
   /** Which direction does the data flow */
@@ -43,6 +48,8 @@ export type Feature = {
   meta: Scalars['JSONObject'];
   /** Feature name, an nice-er to look at name */
   name: Scalars['String'];
+  /** The current value of the feature, ONLY source features will have a value */
+  value?: Maybe<Value>;
 };
 
 export type Mutation = {
@@ -57,6 +64,8 @@ export type Mutation = {
    * this device must exist
    */
   valueBuffer: Scalars['String'];
+  /** Add Zigbee2Mqtt integration */
+  zigbee2Mqtt: Device;
 };
 
 
@@ -70,6 +79,19 @@ export type MutationValueBufferArgs = {
   kind: ValueKind;
   meta?: InputMaybe<Scalars['JSONObject']>;
   name: Scalars['String'];
+};
+
+
+export type MutationZigbee2MqttArgs = {
+  host: Scalars['String'];
+  password?: InputMaybe<Scalars['String']>;
+  port?: InputMaybe<Scalars['Int']>;
+  username?: InputMaybe<Scalars['String']>;
+};
+
+export type Ok = {
+  __typename?: 'Ok';
+  value: Scalars['JSON'];
 };
 
 export type Query = {
@@ -91,19 +113,10 @@ export type Subscription = {
    * Listen for updates to feature values on devices
    * This will print out all updates on all devices
    */
-  values: Value;
+  values: ValueUpdate;
 };
 
-/** A value of a device that has been reported to the system */
-export type Value = {
-  __typename?: 'Value';
-  /** The id of the device the value is for */
-  device: Scalars['String'];
-  /** The feature's name on the device the value is for */
-  feature: Scalars['String'];
-  /** The value of the device, note can be error */
-  value: Scalars['JSON'];
-};
+export type Value = Err | Ok;
 
 export enum ValueDirection {
   Sink = 'SINK',
@@ -118,10 +131,21 @@ export enum ValueKind {
   String = 'STRING'
 }
 
+/** A value of a device that has been reported to the system */
+export type ValueUpdate = {
+  __typename?: 'ValueUpdate';
+  /** The id of the device the value is for */
+  device: Scalars['String'];
+  /** The feature's name on the device the value is for */
+  feature: Scalars['String'];
+  /** The value of the device, note can be error */
+  value: Value;
+};
+
 export type GetAllDevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAllDevicesQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any }> }> };
+export type GetAllDevicesQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, value?: { __typename?: 'Err', message: string } | { __typename?: 'Ok', value: any } | null }> }> };
 
 export type GetDeviceQueryVariables = Exact<{
   id: Scalars['String'];
@@ -152,6 +176,21 @@ export type DeviceUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }
 
 export type DeviceUpdatesSubscription = { __typename?: 'Subscription', device: { __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any }> } };
 
+export type ValueUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ValueUpdatesSubscription = { __typename?: 'Subscription', values: { __typename?: 'ValueUpdate', device: string, feature: string, value: { __typename?: 'Err', message: string } | { __typename?: 'Ok', value: any } } };
+
+export type AddZigbee2MqttIntegrationMutationVariables = Exact<{
+  host: Scalars['String'];
+  port?: InputMaybe<Scalars['Int']>;
+  username?: InputMaybe<Scalars['String']>;
+  password?: InputMaybe<Scalars['String']>;
+}>;
+
+
+export type AddZigbee2MqttIntegrationMutation = { __typename?: 'Mutation', zigbee2Mqtt: { __typename?: 'Device', id: string } };
+
 
 export const GetAllDevicesDocument = gql`
     query getAllDevices {
@@ -165,6 +204,14 @@ export const GetAllDevicesDocument = gql`
       direction
       kind
       meta
+      value {
+        ... on Ok {
+          value
+        }
+        ... on Err {
+          message
+        }
+      }
     }
   }
 }
@@ -211,6 +258,29 @@ export const DeviceUpdatesDocument = gql`
   }
 }
     `;
+export const ValueUpdatesDocument = gql`
+    subscription valueUpdates {
+  values {
+    device
+    feature
+    value {
+      ... on Ok {
+        value
+      }
+      ... on Err {
+        message
+      }
+    }
+  }
+}
+    `;
+export const AddZigbee2MqttIntegrationDocument = gql`
+    mutation addZigbee2MqttIntegration($host: String!, $port: Int, $username: String, $password: String) {
+  zigbee2Mqtt(host: $host, port: $port, username: $username, password: $password) {
+    id
+  }
+}
+    `;
 export type Requester<C = {}, E = unknown> = <R, V>(doc: DocumentNode, vars?: V, options?: C) => Promise<R> | AsyncIterable<R>
 export function getSdk<C, E>(requester: Requester<C, E>) {
   return {
@@ -228,6 +298,12 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     deviceUpdates(variables?: DeviceUpdatesSubscriptionVariables, options?: C): AsyncIterable<DeviceUpdatesSubscription> {
       return requester<DeviceUpdatesSubscription, DeviceUpdatesSubscriptionVariables>(DeviceUpdatesDocument, variables, options) as AsyncIterable<DeviceUpdatesSubscription>;
+    },
+    valueUpdates(variables?: ValueUpdatesSubscriptionVariables, options?: C): AsyncIterable<ValueUpdatesSubscription> {
+      return requester<ValueUpdatesSubscription, ValueUpdatesSubscriptionVariables>(ValueUpdatesDocument, variables, options) as AsyncIterable<ValueUpdatesSubscription>;
+    },
+    addZigbee2MqttIntegration(variables: AddZigbee2MqttIntegrationMutationVariables, options?: C): Promise<AddZigbee2MqttIntegrationMutation> {
+      return requester<AddZigbee2MqttIntegrationMutation, AddZigbee2MqttIntegrationMutationVariables>(AddZigbee2MqttIntegrationDocument, variables, options) as Promise<AddZigbee2MqttIntegrationMutation>;
     }
   };
 }

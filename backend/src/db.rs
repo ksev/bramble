@@ -5,7 +5,7 @@ use tokio::sync::OnceCell;
 
 use sqlx::{
     sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqlitePoolOptions},
-    SqlitePool,
+    SqlitePool, pool::PoolConnection, Sqlite, Transaction,
 };
 
 static POOL: OnceCell<SqlitePool> = OnceCell::const_new();
@@ -24,10 +24,23 @@ async fn open_pool() -> Result<SqlitePool> {
 }
 
 /**
- * Get the global database connection pool
+ * Get a connection from the global db pool
  */
-pub async fn pool() -> &'static SqlitePool {
-    POOL.get_or_try_init(open_pool)
-        .await
-        .expect("Could not open database")
+pub async fn connection() -> Result<PoolConnection<Sqlite>> {
+    let pool = POOL.get_or_try_init(open_pool)
+        .await?;
+
+    let connection = pool.acquire().await?;
+    Ok(connection)
+}
+
+/**
+ * Get a connection from the global db pool
+ */
+pub async fn begin<'c>() -> Result<Transaction<'c, Sqlite>> {
+    let pool = POOL.get_or_try_init(open_pool)
+        .await?;
+
+    let connection = pool.begin().await?;
+    Ok(connection)
 }

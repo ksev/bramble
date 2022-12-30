@@ -1,4 +1,4 @@
-import { devices } from "$data/state";
+import { devices } from "$data/devices";
 import { get } from "svelte/store";
 import type { Context } from "./automate";
 import { BOOL_LOGIC, deviceNode, isNull, NUMERIC_OPS, STATE_OPS } from "./node";

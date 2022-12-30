@@ -1,11 +1,16 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use async_graphql::Enum;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteExecutor};
+use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteConnection};
+use uuid::Uuid;
+
+use super::Device;
+
+pub type FeatureValue = Result<serde_json::Value, String>;
 
 #[derive(Debug)]
 pub struct Feature {
@@ -18,13 +23,10 @@ pub struct Feature {
 
 impl Feature {
     /// Load a value specs from database based in which device it belongs to
-    pub fn load_by_device<'a, E>(
+    pub fn load_by_device<'a>(
         device_id: &'a str,
-        tx: E,
-    ) -> impl Stream<Item = Result<Feature, sqlx::Error>> + 'a
-    where
-        E: SqliteExecutor<'a> + 'a,
-    {
+        conn: &'a mut SqliteConnection,
+    ) -> impl Stream<Item = Result<Feature, sqlx::Error>> + 'a {
         sqlx::query(include_str!("../../sql/feature_by_device.sql"))
             .bind(device_id)
             .try_map(|row: SqliteRow| {
@@ -38,18 +40,15 @@ impl Feature {
                     meta: meta.0,
                 })
             })
-            .fetch(tx)
+            .fetch(conn)
     }
 
     /// Read all readable features of a device
     /// This will also ignore an virtual feature that has been added
-    pub fn load_by_device_readable<'a, E>(
+    pub fn load_by_device_readable<'a>(
         device_id: &'a str,
-        tx: E,
-    ) -> impl Stream<Item = Result<Feature, sqlx::Error>> + 'a
-    where
-        E: SqliteExecutor<'a> + 'a,
-    {
+        conn: &'a mut SqliteConnection,
+    ) -> impl Stream<Item = Result<Feature, sqlx::Error>> + 'a {
         sqlx::query(include_str!(
             "../../sql/feature_by_device_readable_no_virtual.sql"
         ))
@@ -65,14 +64,11 @@ impl Feature {
                 meta: meta.0,
             })
         })
-        .fetch(tx)
+        .fetch(conn)
     }
 
     /// Save a value spec
-    pub async fn save<'a, E>(&'a self, device_id: &'a str, tx: E) -> Result<()>
-    where
-        E: SqliteExecutor<'a>,
-    {
+    pub async fn save(&self, device_id: &str, conn: &mut SqliteConnection) -> Result<()> {
         sqlx::query(include_str!("../../sql/feature_insert.sql"))
             .bind(device_id)
             .bind(&self.id)
@@ -80,14 +76,39 @@ impl Feature {
             .bind(self.direction as u8)
             .bind(self.kind as u8)
             .bind(Json(&self.meta))
-            .execute(tx)
+            .execute(conn)
             .await?;
 
         Ok(())
     }
 
-    // TODO: this is a wierd API
-    pub fn validate(&self, value: &Value) -> Result<Value, String> {
+    /// High level API to attach a Virtual feature to a device and notify that the device has changed
+    pub async fn attach_virtual(
+        device_id: &str,
+        name: String,
+        kind: ValueKind,
+        meta: BTreeMap<String, serde_json::Value>,
+        conn: &mut SqliteConnection,
+    ) -> Result<Feature> {
+        let id = Uuid::new_v4().to_string();
+
+        let feature = Feature {
+            id,
+            name,
+            direction: ValueDirection::SourceSink,
+            kind,
+            meta,
+        };
+
+        feature.save(device_id, conn).await?;
+
+        Arc::new(Device::load_by_id(device_id, conn).await?).notify_changed();
+
+        Ok(feature)
+    }
+
+    /// Validate a if [`Value`] is Valid for this Feature
+    pub fn validate(&self, value: &Value) -> FeatureValue {
         let possible: Vec<String> = value
             .get("possible")
             .map(|v| serde_json::from_value(v.clone()))

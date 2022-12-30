@@ -53,7 +53,7 @@ export class Context {
 
     private anchorMap = new Map<string, Writable<Point>>;
 
-    constructor(nodes: Node[], layout: NodeLayout[], viewPointer: Readable<Point>, pointer: Readable<Point>) {
+    constructor(viewPointer: Readable<Point>, pointer: Readable<Point>) {
         this.contextMenu = writable(null);
 
         this.pointer = pointer;
@@ -61,13 +61,10 @@ export class Context {
 
         this.blockPan = writable(false);
         
-        this.layout = new Map(iter.map(
-            layout, 
-            nl => [nl.id, layoutStore(nl.rect)]
-        ));
+        this.layout = new Map();
 
         this.selected = selectedStore(this);
-        this.nodes = nodeStore(this, nodes);
+        this.nodes = nodeStore(this);
         this.connections = connectionStore(this);
         this.startedConnection = writable(null);
     }
@@ -104,8 +101,8 @@ export interface NodeLayout {
  * Build context for the Automation tool and it's sub widgets
  * ONLY call this from the top level Automate widget
  */
-export function buildContext(nodes: Node[], layout: NodeLayout[], viewPointer: Readable<Point>, pointer: Readable<Point>): Context {
-    return setContext<Context>(key, new Context(nodes, layout, viewPointer, pointer));
+export function buildContext(viewPointer: Readable<Point>, pointer: Readable<Point>): Context {
+    return setContext<Context>(key, new Context(viewPointer, pointer));
 }
 
 export type SelectedStore = ReturnType<typeof selectedStore>;
@@ -197,23 +194,30 @@ export function selectedStore(ctx: Context) {
 
 export type NodeStore = ReturnType<typeof nodeStore>;
 
-export function nodeStore(ctx: Context, start: Node[]) {
-    const backend = new Map<number, Node>(map(start, n => [n.id, n]));
-    const {subscribe, set} = writable(start);
+export function nodeStore(ctx: Context) {
+    const backend = new Map<number, Node>();
+    const {subscribe, set} = writable([]);
 
-    let n = 1; // TODO this is just an assumption
+    let n = 0; // TODO this is just an assumption
 
     return {
         subscribe,
-        add: (node: NodePrototype) => {
+        add: (node: NodePrototype, origin?: Point) => {
             const id = n++;
 
-            let p = get(ctx.pointer);
+            if (!origin) {
+                let p = get(ctx.pointer);
 
-            const x = p.x - 100;
-            const y = p.y - 14;
+                const x = p.x - 100;
+                const y = p.y - 14;
 
-            const origin = new Point(x, y);
+                origin = new Point(x, y);
+            } else {
+                const x = origin.x - 100;
+                const y = origin.y - 14;
+
+                origin = new Point(x, y);
+            }
 
             // Make sure the Node spawn under the pointer 
             // And is immidiatly dragable

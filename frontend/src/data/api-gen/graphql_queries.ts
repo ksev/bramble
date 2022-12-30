@@ -11,7 +11,15 @@ export const GetAllDevices = gql`
 				name,
 				direction,
 				kind,
-				meta
+				meta,
+				value {
+					... on Ok {
+						value
+					},
+					... on Err {
+						message
+					}
+				}
 			}
 		}
 	}
@@ -59,6 +67,31 @@ export const DeviceUpdates = gql`
 				kind,
 				meta
 			}
+		}
+	}
+`;
+
+export const ValueUpdates = gql`
+	subscription valueUpdates {
+		values {
+			device,
+			feature,
+			value {
+				... on Ok {
+					value
+				},
+				... on Err {
+					message
+				}
+			}
+		}
+	}
+`;
+
+export const AddZigbee2MqttIntegration = gql`
+	mutation addZigbee2MqttIntegration($host: String!, $port: Int, $username: String, $password: String) {
+		zigbee2Mqtt(host: $host, port: $port, username: $username, password: $password) {
+			id
 		}
 	}
 `;

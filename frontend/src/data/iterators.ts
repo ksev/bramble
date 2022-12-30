@@ -56,6 +56,48 @@ export function* map<T, O>(it: Iterable<T>, callback: (data: T, index?: number) 
 }
 
 /**
+ * Aync version of Map, Map over an Async iterator 
+ * @param it Iterator
+ * @param callback Async callback that generates new values
+ * @returns An iterator of transformed value
+ */
+export async function* asyncMap<T, O>(it: AsyncIterable<T>, callback: (data: T, index?: number) => Promise<O>) {
+    if (!it) return;
+
+    let index = 0;
+
+    for await (const v of it) {
+        yield await callback(v, index++);
+    }
+}
+
+/**
+ * Get the first element out of an async iterator
+ * @param it The iterator to take element from
+ * @returns The first element
+ */
+export async function asyncFirst<T>(it: AsyncIterable<T>): Promise<T> {
+    for await (const v of it) {
+        return v;
+    }
+}
+
+/**
+ * Drain an Async iterator into an Array
+ * @param it An iterator to complete
+ * @returns An array of all the value
+ */
+export async function asyncToArray<T>(it: AsyncIterable<T>): Promise<T[]> {
+    const out = [];
+
+    for await (const v of it) {
+        out.push(v);
+    }
+
+    return out;
+}
+
+/**
  * Flatmap over an Iterators values, return a new iterator based on value, that iterator is then exhausted inline to 
  * "flatten" then stream 
  * @param it Iterator

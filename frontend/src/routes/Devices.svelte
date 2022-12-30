@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { devices } from '$data/state';
+    import { devices } from '$data/devices';
 
     import Ledger from '$lib/Ledger.svelte';
     import Icon from '$lib/Icon.svelte';

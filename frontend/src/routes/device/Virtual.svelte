@@ -6,9 +6,9 @@
     import TextInput from "$lib/TextInput.svelte";
 	import SelectInput from "$lib/SelectInput.svelte";
 
-	import { devices } from "$data/state";
+	import { devices } from "$data/devices";
     import api from "$data/api";
-    import { ValueKind } from "$data/api_types";
+    import { ValueKind } from "$data/api";
     import WordsInput from "$lib/WordsInput.svelte";
 
 	const types: { value: ValueKind, label: string }[] = [
@@ -26,6 +26,7 @@
 	let deviceId: string;
 	let deviceName: string;
 	let working: boolean = false;
+	let devs = devices.all();
 
 	let deviceBufferValid = false;
 
@@ -69,7 +70,7 @@
 
 	$: deviceOptions = [
 		{ value: 'NEW', label: 'Create new device...'},
-		...$devices.map(d => ({ value: d.id, label: d.name })),
+		...$devs.map(d => ({ value: d.id, label: d.name })),
 	];
 
 	$: deviceBufferValid = (

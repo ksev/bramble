@@ -1,8 +1,7 @@
 <script lang="ts">
-    import type { Feature } from "$data/api_types";
+    import type { Feature } from "$data/api";
 
-
-    import { value } from "$data/state";
+    import { value } from "$data/devices";
     import Icon from "./Icon.svelte";
 
     export let deviceId: string;
@@ -12,21 +11,21 @@
     let val = value(deviceId, spec.id);
 </script>
 
-{#if ('err' in $val)} 
-    <div class="error" title={$val.err}>
-        <div>{$val.err}</div>
+{#if ('message' in $val)} 
+    <div class="error" title={$val.message}>
+        <div>{$val.message}</div>
     </div>  
-{:else if ($val.ok === null)}
+{:else if ($val.value === null)}
     <div class="value">N/A</div> 
 {:else}
 
     {#if (spec.kind === 'BOOL')}
         <div class="value icon">
-            <Icon name={$val.ok ? 'toggle-right' : 'toggle-left' } size={20} />
+            <Icon name={$val.value ? 'toggle-right' : 'toggle-left' } size={20} />
         </div>
     {:else}
         <div class="value">
-            {$val.ok}
+            {$val.value}
             {#if unit} 
             <span>{unit}</span>
             {/if}
