@@ -109,12 +109,12 @@ impl Feature {
 
     /// Validate a if [`Value`] is Valid for this Feature
     pub fn validate(&self, value: &Value) -> FeatureValue {
-        let possible: Vec<String> = value
+        let possible: Vec<String> = self.meta
             .get("possible")
             .map(|v| serde_json::from_value(v.clone()))
             .and_then(|s| s.ok())
             .unwrap_or(vec![]);
-
+            
         match (value, self.kind) {
             (Value::Null, _) => Ok(Value::Null),
             (Value::Bool(b), ValueKind::Bool) => Ok(Value::Bool(*b)),

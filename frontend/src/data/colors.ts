@@ -2,6 +2,7 @@ import Color from 'color';
 import { ValueKind } from './api-gen/api_types';
 
 const colors = {
+    success: Color("rgb(121, 202, 104)"),
     background: Color("#1f1f33"),
     strong: Color("#fafafa"),
     container: Color("rgb(56 56 76)"),
@@ -25,7 +26,7 @@ const colors = {
     any: Color("rgb(140, 108, 255)").mix(Color("#46a2ce"), 0.5).mix(Color("rgb(255, 156, 108)"), 0.5).mix(Color("#ff6c6d"), 0.5),
 }
 
-export function kindColor(kind: ValueKind & "ANY"): Color {
+export function kindColor(kind: ValueKind | "ANY"): Color {
     switch(kind) {
         case "BOOL": return colors.bool;
         case "NUMBER": return colors.number;

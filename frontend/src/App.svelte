@@ -10,6 +10,7 @@
 
   import routes from './routes';
   import Colors from '$data/colors';
+  import { fade } from 'svelte/transition';
 
   let cssColorVariables: string;
   $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
@@ -22,6 +23,9 @@
   </div>
   {/if}
   <div class="main2">
+    <div class="notifications" transition:fade={{duration: 500}}>
+      Device saved!
+    </div>
     <menubar style="display: none">    
       <div>
         <img width="48" src={logo} alt="Rome"/>      
@@ -47,8 +51,6 @@
     </section>
   </div>
 </main>
-
-<div style=""></div>
 
 <style>
   main {
@@ -107,4 +109,23 @@
     border-bottom: 1px solid #f98383;
     text-shadow: 2px 2px rgba(255,255,255,0.25);
   }
+
+  .notifications {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px;
+    background-color: var(--success);
+    color: var(--strong);
+    border: 4px solid rgba(255,255,255,0.25);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 4px;
+    text-shadow: 2px 2px rgba(255,255,255,0.25);
+    font-weight: bold;
+    font-size: 16px;
+  }
+
 </style>

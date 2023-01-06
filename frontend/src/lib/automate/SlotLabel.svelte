@@ -10,7 +10,7 @@
 
     let title = '';
 
-    let kind: ValueKind;
+    let kind: ValueKind | "ANY";
     let meta: Record<string, any>;
 
     $: if (adaptKind && !slot.multiple) {

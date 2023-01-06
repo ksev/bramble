@@ -2,6 +2,7 @@ import { derived, writable, type Readable, type Writable } from "svelte/store";
 import Api, { type ApiClient, type Value } from '$data/api';
 import type { Device } from "./api-gen/api_types";
 import { identity } from "svelte/internal";
+import { MutablePromise } from "./utils";
 
 const valueStore = new Map<string, Writable<Value>>();
 
@@ -30,7 +31,7 @@ class Devices {
     private deviceMap = new Map<string, Device>();
     private deviceList = writable<Device[]>([]);
 
-    private initialized = false;
+    private initialized = new MutablePromise();
 
     constructor() {
         Api.subscribe(c => {
@@ -44,21 +45,9 @@ class Devices {
     }
 
     byId = (id: string): Promise<Device> => {
-        if (this.initialized) {
-            const dev = this.deviceMap.get(id);
-            return Promise.resolve(dev);
-        }
-
-        return new Promise((resolve) => {
-            const unsub = this.deviceList.subscribe(_ => {
-                // We only have a valid "request" if we have other devices in the list 
-                // which means we have initialized
-                if (this.initialized) {
-                    resolve(this.deviceMap.get(id));
-                    unsub();
-                }
-            })
-        });
+        return this.initialized.then(_ => {
+            return this.deviceMap.get(id)
+        })
     }
 
     private async fullSync(client: ApiClient) {
@@ -73,7 +62,7 @@ class Devices {
             }
         }
 
-        this.initialized = true;
+        this.initialized.resolve(undefined);
         this.deviceList.set(result.device);  
         
         this.subscribeDeviceUpdates(client);

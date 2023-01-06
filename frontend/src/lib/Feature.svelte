@@ -1,6 +1,6 @@
 <script lang="ts">
     import Icon from './Icon.svelte';
-    import Colors, { Color } from '../data/colors';
+    import Colors, { Color, kindColor } from '../data/colors';
     import Sparkline from './Sparkline.svelte';
     import Value from './Value.svelte';
     import type { Feature } from '$data/api';
@@ -10,6 +10,8 @@
 
     let color: Color;
     let icon: string;
+
+    let kcolor = kindColor(spec.kind);
 
     switch (spec.direction) {
         case "SINK": 
@@ -50,7 +52,7 @@
 
     {#if showFeedback} 
         <div class="feedback">
-            <Sparkline data={datapoints} color={color.fade(0.3)} /> 
+            <Sparkline data={datapoints} color={kcolor.fade(0.3)} /> 
         </div>
     {/if}
     

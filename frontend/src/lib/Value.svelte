@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Feature } from "$data/api";
+    import colors, { kindColor } from "$data/colors";
 
     import { value } from "$data/devices";
     import Icon from "./Icon.svelte";
@@ -9,6 +10,7 @@
     export let unit: string = '';
 
     let val = value(deviceId, spec.id);
+    let color = kindColor(spec.kind).mix(colors.container, 0.25);
 </script>
 
 {#if ('message' in $val)} 
@@ -16,15 +18,15 @@
         <div>{$val.message}</div>
     </div>  
 {:else if ($val.value === null)}
-    <div class="value">N/A</div> 
+    <div class="value" style="background-color: {color}">N/A</div> 
 {:else}
 
     {#if (spec.kind === 'BOOL')}
-        <div class="value icon">
+        <div class="value icon" style="background-color: {color}">
             <Icon name={$val.value ? 'toggle-right' : 'toggle-left' } size={20} />
         </div>
     {:else}
-        <div class="value">
+        <div class="value" style="background-color: {color}">
             {$val.value}
             {#if unit} 
             <span>{unit}</span>
@@ -57,6 +59,6 @@
     }
 
     span {
-        color: rgba(255,255,255,0.3);
+        color: rgba(255,255,255,0.4);
     }
 </style>
