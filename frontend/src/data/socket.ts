@@ -37,7 +37,7 @@ export const resocket = (url: string, protocol: string[] = []) => readable<numbe
 
     const open = () => {
         clearTimeout(timeout);
-        backOff = exponential(800, 30000);
+        backOff = exponential(500, 30000);
         ws.onclose = retry;
         set(ws);
 

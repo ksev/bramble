@@ -1,11 +1,12 @@
+mod api;
+mod automation;
 mod bus;
+mod db;
+mod device;
 mod http;
 mod integration;
 mod io;
 mod task;
-mod device;
-mod db;
-mod api;
 
 use std::str::FromStr;
 
@@ -22,6 +23,9 @@ async fn main() -> Result<()> {
     }
 
     tracing_subscriber::fmt::init();
+
+    let mut connection = db::connection().await?;
+    sqlx::migrate!().run(&mut connection).await?;
 
     task::create_group(init).complete().await?;
 

@@ -1,3 +1,5 @@
+-- Add migration script here
+
 CREATE TABLE "device" (
 	"id"	TEXT NOT NULL,
 	"name"	TEXT NOT NULL,
@@ -15,6 +17,7 @@ CREATE TABLE "feature" (
 	"direction"	INTEGER NOT NULL,
 	"kind"	INTEGER NOT NULL,
 	"meta"	TEXT NOT NULL,
+	"automate" TEXT,
 	FOREIGN KEY("device") REFERENCES "device"("id") ON DELETE CASCADE,
 	PRIMARY KEY("device","id")
 );

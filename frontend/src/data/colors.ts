@@ -2,10 +2,10 @@ import Color from 'color';
 import { ValueKind } from './api-gen/api_types';
 
 const colors = {
-    success: Color("rgb(121, 202, 104)"),
+    success: Color("rgb(112, 170, 100)"),
     background: Color("#1f1f33"),
     strong: Color("#fafafa"),
-    container: Color("rgb(56 56 76)"),
+    container: Color("rgb(56,56,76)"),
     containerHigh: Color("rgb(72, 72, 96)"),    
     fadedtext: Color("rgb(159, 161, 172)"),
     icon: Color("#b7bac8"),

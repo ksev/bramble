@@ -1,5 +1,4 @@
 import { Extent, Point, Rect } from '$data/geometry';
-import * as iter from '$data/iterators';
 import { filter, map, pop } from '$data/iterators';
 import { getContext, setContext } from "svelte";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";
@@ -64,7 +63,7 @@ export class Context {
         this.layout = new Map();
 
         this.selected = selectedStore(this);
-        this.nodes = nodeStore(this);
+        this.nodes = nodeStore(this, 0);
         this.connections = connectionStore(this);
         this.startedConnection = writable(null);
     }
@@ -194,14 +193,16 @@ export function selectedStore(ctx: Context) {
 
 export type NodeStore = ReturnType<typeof nodeStore>;
 
-export function nodeStore(ctx: Context) {
+export function nodeStore(ctx: Context, counter: number) {
     const backend = new Map<number, Node>();
     const {subscribe, set} = writable([]);
 
-    let n = 0; // TODO this is just an assumption
+    let n = counter; 
 
     return {
         subscribe,
+        // We need to save this so we keep id stable over time
+        counter: () => n,
         add: (node: NodePrototype, origin?: Point) => {
             const id = n++;
 
@@ -234,6 +235,9 @@ export function nodeStore(ctx: Context) {
             });
 
             set(Array.from(backend.values()));
+        },
+        all: () => {
+            return Array.from(backend.values());
         },
         replace: (id: number, node: NodePrototype) => {
             backend.set(id, {
@@ -381,6 +385,7 @@ function connectionStore(ctx: Context) {
     }
 
     return {
+        all,
         connectionCount: (ref: SlotRef) => {
             const sref = ref.toString();
             const store = outgoing.has(sref) ? outgoing : incoming;

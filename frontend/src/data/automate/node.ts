@@ -1,24 +1,32 @@
 import type { Feature } from "$data/api";
 import colors, { Color, directionColor } from "$data/colors";
 import { ValueKind, type Device } from "$data/api";
-import NumberCompare from "$lib/automate/settings/NumberCompare.svelte";
-import StateCompare from "$lib/automate/settings/StateCompare.svelte";
 import { SvelteComponentTyped,  type ComponentProps, type ComponentType } from "svelte";
 import { Context } from "./automate";
 
 export interface Node {
+    // Monotonic id of node
     id: number,
-    label: string,
-    color: Color,
-    icon: string,
-    target?: boolean,
-
-    inputs: Slot[],
-    outputs: Slot[],
-    settings?: Settings,
-   
-    onAddedConnection?: (local: SlotRef, remote: SlotRef) => void;
-    onRemovedConnection?: (local: SlotRef, remote: SlotRef) => void;
+    // Type of node 
+    properties: string | any,
+    // Node label, shown in the box handle 
+    label: string
+    // Color of the box handle
+    color: Color
+    // Icon to show in the box handle
+    icon: string
+    // Is this node the Automation output
+    target?: boolean
+    // Node input slots 
+    inputs: Slot[]
+    // Node output slots 
+    outputs: Slot[]
+    // Settings component, if the node has one
+    settings?: Settings
+    // Callback that gets fired when a connection is made 
+    onAddedConnection?: (local: SlotRef, remote: SlotRef) => void
+    // Callback that gets fired when a connection is broken
+    onRemovedConnection?: (local: SlotRef, remote: SlotRef) => void
 }
 
 /**
@@ -71,8 +79,10 @@ export interface IncompleteConnection {
     over?: SlotRef
 };
 
+
 export const automationTarget = (name: string, feature: Feature): NodePrototype  => ({
     label: name,
+    properties: "Target",
     color: directionColor(feature.direction),
     icon: "settings-automation",
     target: true,
@@ -87,6 +97,7 @@ export const automationTarget = (name: string, feature: Feature): NodePrototype 
     outputs: [],
 })
 
+/*
 export function isNull(ctx: Context, inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
     return {
         label: "Is null",
@@ -125,69 +136,6 @@ export function isNull(ctx: Context, inputKind: ValueKind | "ANY" = "ANY"): Node
 }
 
 export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
-    and: {
-        label: "And",
-        icon: "logic-and",
-        color: colors.bool,
-        inputs: [{
-            id: "input",
-            label: "Input",
-            kind: ValueKind.Bool,
-            multiple: true,
-        }],
-        outputs: [{
-            id: "output",
-            label: "Result",
-            kind: ValueKind.Bool,
-        }]
-    },
-    or: {
-        label: "Or",
-        icon: "logic-or",
-        color: colors.bool,
-        inputs: [{
-            id: "input",
-            label: "Input",
-            kind: ValueKind.Bool,
-            multiple: true,
-        }],
-        outputs: [{
-            id: "output",
-            label: "Result",
-            kind: ValueKind.Bool,
-        }]
-    },
-    xor: {
-        label: "Xor",
-        icon: "logic-xor",
-        color: colors.bool,
-        inputs: [{
-            id: "input",
-            label: "Input",
-            kind: ValueKind.Bool,
-            multiple: true,
-        }],
-        outputs: [{
-            id: "result",
-            label: "Result",
-            kind: ValueKind.Bool,
-        }]
-    },
-    not: {
-        label: "Not",
-        icon: "logic-not",
-        color: colors.bool,
-        inputs: [{
-            id: "input",
-            label: "Input",
-            kind: ValueKind.Bool,
-        }],
-        outputs: [{
-            id: "result",
-            label: "Result",
-            kind: ValueKind.Bool,
-        }]
-    }
 }
 
 export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
@@ -293,6 +241,7 @@ export const STATE_OPS = {
         }]
     })
 }
+*/
 
 export function deviceNode(device: Device): NodePrototype {
     const outputs: Slot[] = device
@@ -306,6 +255,11 @@ export function deviceNode(device: Device): NodePrototype {
         }));
 
     return {
+        properties: {
+            "Device": {
+                "id": device.id,
+            }
+        },
         label: device.name,
         color: colors.device,
         icon: "cpu",

@@ -30,3 +30,4 @@ async-graphql = "5.0.4"
 async-graphql-axum = "5.0.4"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
 tower-http = { version = "0.3.5", features = ["fs", "trace", "cors"] }
+

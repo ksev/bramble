@@ -7,7 +7,8 @@ use async_graphql::{Context, Object, Schema, SimpleObject, Subscription};
 use futures::{Stream, StreamExt};
 
 use crate::{
-    bus::BUS, db, device::SOURCES, integration::zigbee2mqtt, io::mqtt::MqttServerInfo, task::Task,
+    automation::Automation, bus::BUS, db, device::SOURCES, integration::zigbee2mqtt,
+    io::mqtt::MqttServerInfo, task::Task,
 };
 
 pub struct Query;
@@ -239,6 +240,23 @@ impl Mutation {
         let device = zigbee2mqtt::create_integration_device(server_info, task, &mut conn).await?;
 
         Ok(device.into())
+    }
+    /// Add or change automation for a feature
+    async fn automate(
+        &self,
+        device_id: String,
+        feature_id: String,
+        program: serde_json::Value,
+    ) -> Result<usize> {
+        let program: Automation = serde_json::from_value(program)?;
+
+        let mut conn = db::connection().await?;
+        let mut feature = crate::device::Feature::load(&device_id, &feature_id, &mut conn).await?;
+
+        feature.automate = Some(program);
+        feature.save(&device_id, &mut conn).await?;
+
+        Ok(0)
     }
 }
 

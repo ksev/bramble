@@ -106,6 +106,7 @@ impl Definition {
                             ("value_on".into(), value_on.clone()),
                             ("value_off".into(), value_off.clone()),
                         ]),
+                        automate: None,
                     })
                 }
 
@@ -138,6 +139,7 @@ impl Definition {
                                 )
                             })
                             .collect(),
+                        automate: None,
                     })
                 }
 
@@ -164,6 +166,7 @@ impl Definition {
                             "possible".into(),
                             serde_json::Value::from(values.clone()),
                         )]),
+                        automate: None,
                     })
                 }
 
@@ -186,6 +189,7 @@ impl Definition {
                         direction,
                         kind: ValueKind::String,
                         meta: BTreeMap::new(),
+                        automate: None,
                     })
                 }
 
@@ -209,6 +213,7 @@ impl Definition {
                         direction,
                         kind: ValueKind::Number,
                         meta: BTreeMap::new(),
+                        automate: None,
                     })
                 }
 

@@ -1,69 +1,69 @@
 <script lang="ts">
-  import Router from 'svelte-spa-router';  
-  import { apiConnection } from '$data/api';
-	
+  import Router from "svelte-spa-router";
+  import { apiConnection } from "$data/api";
+  import { current } from "$data/notification";
+
   import Icon from "$lib/Icon.svelte";
   import MainMenu from "$lib/MainMenu.svelte";
   import MenuItem from "$lib/MenuItem.svelte";
 
   import logo from "./assets/logo.svg";
 
-  import routes from './routes';
-  import Colors from '$data/colors';
-  import { fade } from 'svelte/transition';
+  import routes from "./routes";
+  import Colors from "$data/colors";
+  import { fade } from "svelte/transition";
 
   let cssColorVariables: string;
-  $: cssColorVariables = Object.entries(Colors).map(([k,v]) => `--${k.toLowerCase()}:${v}`).join(';');
+  $: cssColorVariables = Object.entries(Colors)
+    .map(([k, v]) => `--${k.toLowerCase()}:${v}`)
+    .join(";");
+
+  $: notif =
+    typeof $apiConnection === "number" && $apiConnection > 500
+      ? {
+          message: "Cannot connect to Rome service",
+          type: "error",
+        }
+      : $current;
 </script>
 
 <main style={cssColorVariables}>
-  {#if typeof $apiConnection === 'number' && $apiConnection > 500}
-  <div class="error">
-    ERROR: Could not connect to Rome service
-  </div>
-  {/if}
-  <div class="main2">
-    <div class="notifications" transition:fade={{duration: 500}}>
-      Device saved!
+  {#if notif}
+    <div class="notification {notif.type}" transition:fade|local>
+      {notif.message}
     </div>
-    <menubar style="display: none">    
-      <div>
-        <img width="48" src={logo} alt="Rome"/>      
-      </div>
+  {/if}
+  <menubar style="display: none">
+    <div>
+      <img width="48" src={logo} alt="Rome" />
+    </div>
 
-      <div class="name">Rome</div>
+    <div class="name">Rome</div>
 
-      <div class="main-menu">
-        <MainMenu>
-          <MenuItem url="/" icon="home" />
-          <MenuItem url="/devices" icon="microchip" />
-          <MenuItem url="/settings" icon="settings-alt" />
-        </MainMenu>
-      </div>
+    <div class="main-menu">
+      <MainMenu>
+        <MenuItem url="/" icon="home" />
+        <MenuItem url="/devices" icon="microchip" />
+        <MenuItem url="/settings" icon="settings-alt" />
+      </MainMenu>
+    </div>
 
-      <div class="grow"></div>
+    <div class="grow" />
 
-      <Icon name="log-out" />
-    </menubar>
+    <Icon name="log-out" />
+  </menubar>
 
-    <section>
-      <Router {routes} />
-    </section>
-  </div>
+  <section>
+    <Router {routes} />
+  </section>
 </main>
 
 <style>
   main {
     min-height: 100%;
     display: flex;
-    flex-direction: column;
-  }
-
-  .main2 {
     background-color: var(--background);
-    display: flex;
     position: relative;
-    flex-grow: 1;
   }
 
   .name {
@@ -72,7 +72,6 @@
   }
 
   section {
-    box-sizing: border-box;
     width: 100%;
     padding: 24px;
     margin: 0;
@@ -83,8 +82,8 @@
     border-right: 2px solid var(--container);
 
     display: flex;
-    flex-direction: column;   
-    
+    flex-direction: column;
+
     align-items: center;
 
     padding: 24px 0;
@@ -93,39 +92,37 @@
   .main-menu {
     margin-top: 32px;
   }
-  
+
   menubar .grow {
     flex-grow: 1;
   }
 
-  .error {
+  .notification {
     padding: 12px;
     text-align: center;
     color: var(--strong);
     font-weight: bold;
     font-size: 16px;
+    position: fixed;
+    width: 100%;
+    z-index: 999;
+    text-shadow: 2px 2px rgba(255, 255, 255, 0.25);
 
+    transition: 500ms border, 500ms background-color;
+  }
+
+  .notification.error {
     background-color: var(--error);
     border-bottom: 1px solid #f98383;
-    text-shadow: 2px 2px rgba(255,255,255,0.25);
   }
 
-  .notifications {
-    position: fixed;
-    top: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px;
+  .notification.notify {
+    background-color: var(--container);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .notification.success {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
     background-color: var(--success);
-    color: var(--strong);
-    border: 4px solid rgba(255,255,255,0.25);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 4px;
-    text-shadow: 2px 2px rgba(255,255,255,0.25);
-    font-weight: bold;
-    font-size: 16px;
   }
-
 </style>

@@ -54,6 +54,12 @@ export const CreateValueBuffer = gql`
 	}
 `;
 
+export const SetAutomation = gql`
+	mutation setAutomate($deviceId: String!, $featureId: String!, $program: JSON!) {
+	  automate(deviceId: $deviceId, featureId: $featureId, program: $program)
+	}
+`
+
 export const DeviceUpdates = gql`
 	subscription deviceUpdates {
 		device {

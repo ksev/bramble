@@ -5,11 +5,13 @@
     import { Extent, Point, Rect } from "$data/geometry";
     import IncompleteConnectionLine from "$lib/automate/IncompleteConnectionLine.svelte";
     import ConnectionLine from "$lib/automate/ConnectionLine.svelte";
-    import { derived, writable } from "svelte/store";
+    import { derived, get, writable } from "svelte/store";
     import { devices } from "$data/devices";
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
     import TopMenu from "$lib/automate/TopMenu.svelte";
     import { automationTarget } from "$data/automate/node";
+    import { map } from "$data/iterators";
+    import Api from "$data/api";
 
     export let params: {
         deviceid: string;
@@ -55,12 +57,47 @@
         startedConnection,
         contextMenu,
         nodes,
+        layout,
         selected,
         connections,
     } = buildContext(
         viewPointer,
         pointer
     );
+
+    function save() {
+        const n = nodes.all().map(n => {
+            const rect = get(layout.get(n.id));
+
+            return {
+                id: n.id,
+                properties: n.properties,
+                position: [
+                    rect.origin.x, 
+                    rect.origin.y, 
+                ], 
+            };
+        });
+
+        const c = Array.from(map(connections.all(), c => {
+            return [
+                [c.from.nodeId, c.from.name],
+                [c.to.nodeId, c.to.name],
+            ];
+        }));
+
+        const program = {
+            counter: nodes.counter(),
+            nodes: n,
+            connections: c,    
+        };
+
+        $Api.setAutomate({
+            deviceId: params.deviceid,
+            featureId: params.property,
+            program
+        });
+    }
 
     function home() {
         x = 0;
@@ -219,7 +256,7 @@
     class:grabbed
     class:grabenabled={spaceDown}
 >
-    <TopMenu bind:zoom={zoom} on:home={home} />
+    <TopMenu bind:zoom={zoom} on:home={home} on:save={save} />
 
     {#if $contextMenu}
         <ContextMenu />

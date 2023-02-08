@@ -54,6 +54,8 @@ export type Feature = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  /** Add or change automation for a feature */
+  automate: Scalars['Int'];
   /**
    * Create a new generic virtual device, this is just a recepticle to
    * attach value buffers to
@@ -66,6 +68,13 @@ export type Mutation = {
   valueBuffer: Scalars['String'];
   /** Add Zigbee2Mqtt integration */
   zigbee2Mqtt: Device;
+};
+
+
+export type MutationAutomateArgs = {
+  deviceId: Scalars['String'];
+  featureId: Scalars['String'];
+  program: Scalars['JSON'];
 };
 
 
@@ -171,6 +180,15 @@ export type CreateValueBufferMutationVariables = Exact<{
 
 export type CreateValueBufferMutation = { __typename?: 'Mutation', valueBuffer: string };
 
+export type SetAutomateMutationVariables = Exact<{
+  deviceId: Scalars['String'];
+  featureId: Scalars['String'];
+  program: Scalars['JSON'];
+}>;
+
+
+export type SetAutomateMutation = { __typename?: 'Mutation', automate: number };
+
 export type DeviceUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -242,6 +260,11 @@ export const CreateValueBufferDocument = gql`
   valueBuffer(deviceId: $deviceId, name: $name, kind: $kind, meta: $meta)
 }
     `;
+export const SetAutomateDocument = gql`
+    mutation setAutomate($deviceId: String!, $featureId: String!, $program: JSON!) {
+  automate(deviceId: $deviceId, featureId: $featureId, program: $program)
+}
+    `;
 export const DeviceUpdatesDocument = gql`
     subscription deviceUpdates {
   device {
@@ -295,6 +318,9 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     createValueBuffer(variables: CreateValueBufferMutationVariables, options?: C): Promise<CreateValueBufferMutation> {
       return requester<CreateValueBufferMutation, CreateValueBufferMutationVariables>(CreateValueBufferDocument, variables, options) as Promise<CreateValueBufferMutation>;
+    },
+    setAutomate(variables: SetAutomateMutationVariables, options?: C): Promise<SetAutomateMutation> {
+      return requester<SetAutomateMutation, SetAutomateMutationVariables>(SetAutomateDocument, variables, options) as Promise<SetAutomateMutation>;
     },
     deviceUpdates(variables?: DeviceUpdatesSubscriptionVariables, options?: C): AsyncIterable<DeviceUpdatesSubscription> {
       return requester<DeviceUpdatesSubscription, DeviceUpdatesSubscriptionVariables>(DeviceUpdatesDocument, variables, options) as AsyncIterable<DeviceUpdatesSubscription>;

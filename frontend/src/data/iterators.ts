@@ -18,7 +18,11 @@ export function* random() {
 
 export function* randomCharacters() {
     for (let r of random()) {
-        yield Math.random().toString(36).replace('0.', '');  
+        const chunk = r.toString(36).replace('0.', '');
+
+        for (let c of chunk) {
+            yield c;
+        }  
     }
 }
 

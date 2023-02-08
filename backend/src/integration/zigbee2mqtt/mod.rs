@@ -65,22 +65,23 @@ pub async fn zigbee2mqtt_update(
                 .into_iter()
                 .filter_map(|d| d.into_device(&parent, server.clone()));
 
-            let mut tx = db::begin().await?;
 
             for (device, features) in iter {
+                let mut tx = db::begin().await?;
+                
                 // Persist the device
                 device.save(&mut tx).await?;
 
                 for feature in features {
                     feature.save(&device.id, &mut tx).await?;
                 }
+                
+                tx.commit().await?;
 
                 device.spawn_tasks(&mut t);
 
                 BUS.device.add.publish(Arc::new(device));
             }
-
-            tx.commit().await?;
         }
     }
 

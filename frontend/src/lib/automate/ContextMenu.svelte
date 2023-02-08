@@ -1,13 +1,13 @@
 <script lang="ts">
     import Icon from "$lib/Icon.svelte";
     import { automateContext } from "$data/automate/automate";
-    import { ALL, type Action } from "$data/automate/contextMenu";
+    import { ROOT, type Action } from "$data/automate/contextMenu";
 
     const ctx = automateContext();
     const { contextMenu } = ctx;
 
     let timer: number;
-    let items = ALL;
+    let items = ROOT;
 
     function onMouseLeave() {
        timer = setTimeout(() => contextMenu.set(null), 350);
@@ -44,14 +44,14 @@
             {/if}
             {#each items as item}
             <div class="menu-item">
-                <div on:click={() => doAction(item.action)}>
+                <button on:click={() => doAction(item.action)}>
                     <div class="label">
                         <Icon name={item.icon} size={16} /> {item.text} 
                     </div>
                     {#if item.category}
                         <Icon name="chevron-right" size={16} />
                     {/if}
-                </div>
+                </button>
             </div>
             {/each}
         </div>
@@ -101,6 +101,7 @@
         justify-content: space-between;
         align-items: center;
         cursor: pointer;
+        width: 100%;
     }
 
     .menu-item:hover > *:not(.search-item) {

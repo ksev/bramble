@@ -6,7 +6,7 @@
     import Section from '$lib/Section.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
     import TextInput from '$lib/TextInput.svelte';
-    import Api from '$data/api';
+    import api from '$data/api';
 
     let host: string;
     let password: string;
@@ -20,7 +20,7 @@
 
     async function connect() {
         try {
-            await Api.addZigbee2MqttIntegration({
+            await $api.addZigbee2MqttIntegration({
                 host,
                 port,
                 username,
@@ -79,7 +79,7 @@
         
         <section class="menu">
             <SubMenu>
-                <button on:click={connect}>
+                <button on:click={connect} disabled={!$api}>
                     Connect
                 </button>
             </SubMenu>

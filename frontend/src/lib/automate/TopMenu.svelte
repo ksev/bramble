@@ -31,64 +31,68 @@
     function home() {
         dispatch("home", null);
     }
+
+    function save() {
+        dispatch("save", null);    
+    }
 </script>
 
 <div class="top-menu">
-    <ul class="icon-row">
-        <li>
+    <div class="icon-row">
+        <button on:click={save}>
             Save
             <Icon name="device-floppy" color={colors.fadedtext} size={16} />
-        </li>
-    </ul>
+        </button>
+    </div>
 
     <div class="right-group">
-        <ul class="icon-row">
-            <li title="Convert automation to Value Buffer">
+        <div class="icon-row">
+            <button title="Convert automation to Value Buffer">
                 <Icon name="logic-buffer" color={colors.fadedtext} size={18} />
-            </li>
-        </ul>
+            </button>
+        </div>
 
-        <ul class="icon-row">
-            <li title="Align top" on:click={alignTop}>
+        <div class="icon-row">
+            <button title="Align top" on:click={alignTop}>
                 <Icon name="box-align-top" color={colors.fadedtext} size={18} />
-            </li>
-            <li title="Align bottom">
+            </button>
+            <button title="Align bottom">
                 <Icon
                     name="box-align-bottom"
                     color={colors.fadedtext}
                     size={18}
                 />
-            </li>
-            <li title="Align left">
+            </button>
+            <button title="Align left">
                 <Icon
                     name="box-align-left"
                     color={colors.fadedtext}
                     size={18}
                 />
-            </li>
-            <li title="Align right">
+            </button>
+            <button title="Align right">
                 <Icon
                     name="box-align-right"
                     color={colors.fadedtext}
                     size={18}
                 />
-            </li>
-        </ul>
+            </button>
+        </div>
 
-        <ul class="icon-row">
-            <li on:click={home} title="Home view">
+        <div class="icon-row">
+            <button on:click={home} title="Home view">
                 <Icon name="home" color={colors.fadedtext} size={18} />
-            </li>
-        </ul>
+            </button>
+        </div>
 
         <div class="zoom-box">
-            <div class="plus" title="Zoom in" on:click={() => (zoom += 0.1)}>
+            <button class="plus" title="Zoom in" on:click={() => (zoom += 0.1)}>
                 +
-            </div>
+            </button>
             <div class="value">{(zoom * 100).toFixed(0)}%</div>
-            <div class="minus" title="Zoom out" on:click={() => (zoom -= 0.1)}>
+            <button class="minus" title="Zoom out" on:click={() => (zoom -= 0.1)}>
                 -
-            </div>
+            </button>
         </div>
     </div>
 </div>
@@ -102,6 +106,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        height: 51px;
     }
 
     .zoom-box {
@@ -117,7 +122,7 @@
         height: 27px;
     }
 
-    .zoom-box > div {
+    .zoom-box > * {
         padding: 3px;
         transition: 200ms background-color;
     }
@@ -125,6 +130,13 @@
     .zoom-box > .value {
         width: 40px;
         text-align: center;
+    }
+
+    .zoom-box > button {
+        background-color: var(--container);
+        display: flex;    
+        align-items: center;
+        justify-content: center;
     }
 
     .zoom-box > .plus,
@@ -150,7 +162,7 @@
         height: 27px;
     }
 
-    .icon-row > li {
+    .icon-row > button {
         display: flex;
         justify-content: center;
         align-items: center;
@@ -159,20 +171,20 @@
         gap: 6px;
     }
 
-    .icon-row > li:hover {
+    .icon-row > button:hover {
         background-color: var(--containerhigh);
     }
 
-    .icon-row > li:active {
+    .icon-row > button:active {
         background-color: var(--container);
     }
 
-    .icon-row > li:first-child {
+    .icon-row > button:first-child {
         border-top-left-radius: 4px;
         border-bottom-left-radius: 4px;
     }
 
-    .icon-row > li:last-child {
+    .icon-row > button:last-child {
         border-top-right-radius: 4px;
         border-bottom-right-radius: 4px;
     }

@@ -1,7 +1,8 @@
 import { devices } from "$data/devices";
 import { get } from "svelte/store";
 import type { Context } from "./automate";
-import { BOOL_LOGIC, deviceNode, isNull, NUMERIC_OPS, STATE_OPS } from "./node";
+import { deviceNode } from "./node";
+import * as logic from "./nodes/logic";
 
 export type Action = 
     { type: "next", fn: () => MenuItem[] } |
@@ -19,7 +20,7 @@ const BACK_ITEM: MenuItem = {
     icon: "chevrons-left",
     action: {
         type: "next",
-        fn: () => ALL,
+        fn: () => ROOT,
     },
 };
 
@@ -42,14 +43,16 @@ function* collectDevices() {
 
 const LOGICITEMS: MenuItem[] = [
     BACK_ITEM,
+    
     {
         text: "And",
         icon: "logic-and",
         action: {
             type: "load",
-            fn: (ctx: Context) => ctx.nodes.add(BOOL_LOGIC.and),
+            fn: (ctx: Context) => ctx.nodes.add(logic.AND),
         },
     },
+    /*
     {
         text: "Or",
         icon: "logic-or",
@@ -74,10 +77,12 @@ const LOGICITEMS: MenuItem[] = [
             fn: (ctx: Context) => ctx.nodes.add(BOOL_LOGIC.xor),
         },
     }
+    */
 ];
 
 const NUMBERSITEMS: MenuItem[] = [
     BACK_ITEM,
+    /*
     {
         text: "Compare",
         icon: "equal",
@@ -110,10 +115,12 @@ const NUMBERSITEMS: MenuItem[] = [
             fn: (ctx: Context) => ctx.nodes.add(NUMERIC_OPS.compare),
         }
     },
+    */
 ];
 
 const STATEITEMS: MenuItem[] = [
     BACK_ITEM,
+    /*
     {
         text: "Compare",
         icon: "equal",
@@ -122,9 +129,11 @@ const STATEITEMS: MenuItem[] = [
             fn: (ctx: Context) => ctx.nodes.add(STATE_OPS.compare(ctx, [])),
         }
     }
+    */
 ];
 
-export const ALL: MenuItem[] = [
+export const ROOT: MenuItem[] = [
+    /*
     {
         text: "Is null",
         icon: "bolt-off",
@@ -133,6 +142,7 @@ export const ALL: MenuItem[] = [
             fn: (ctx: Context) => ctx.nodes.add(isNull(ctx)),
         }
     },
+    */
     {
         text: "Devices",
         icon: "cpu",
