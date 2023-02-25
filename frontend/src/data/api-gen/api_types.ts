@@ -35,6 +35,8 @@ export type Err = {
 
 export type Feature = {
   __typename?: 'Feature';
+  /** Automation associated with this feature, ONLY sink features can have automations */
+  automate?: Maybe<Scalars['JSON']>;
   /** Which direction does the data flow */
   direction: ValueDirection;
   /** Feature id these are only device unique not global unique */
@@ -154,14 +156,14 @@ export type ValueUpdate = {
 export type GetAllDevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAllDevicesQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, value?: { __typename?: 'Err', message: string } | { __typename?: 'Ok', value: any } | null }> }> };
+export type GetAllDevicesQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null, value?: { __typename?: 'Err', message: string } | { __typename?: 'Ok', value: any } | null }> }> };
 
 export type GetDeviceQueryVariables = Exact<{
   id: Scalars['String'];
 }>;
 
 
-export type GetDeviceQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any }> }> };
+export type GetDeviceQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null }> }> };
 
 export type CreateGenericDeviceMutationVariables = Exact<{
   name: Scalars['String'];
@@ -192,7 +194,7 @@ export type SetAutomateMutation = { __typename?: 'Mutation', automate: number };
 export type DeviceUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DeviceUpdatesSubscription = { __typename?: 'Subscription', device: { __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any }> } };
+export type DeviceUpdatesSubscription = { __typename?: 'Subscription', device: { __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null }> } };
 
 export type ValueUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
@@ -230,6 +232,7 @@ export const GetAllDevicesDocument = gql`
           message
         }
       }
+      automate
     }
   }
 }
@@ -246,6 +249,7 @@ export const GetDeviceDocument = gql`
       direction
       kind
       meta
+      automate
     }
   }
 }
@@ -277,6 +281,7 @@ export const DeviceUpdatesDocument = gql`
       direction
       kind
       meta
+      automate
     }
   }
 }

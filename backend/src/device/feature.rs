@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 
 use anyhow::Result;
 use async_graphql::Enum;
@@ -9,8 +9,6 @@ use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteConnection};
 use uuid::Uuid;
 
 use crate::automation::Automation;
-
-use super::Device;
 
 pub type FeatureValue = Result<serde_json::Value, String>;
 
@@ -137,8 +135,6 @@ impl Feature {
         };
 
         feature.save(device_id, conn).await?;
-
-        Arc::new(Device::load_by_id(device_id, conn).await?).notify_changed();
 
         Ok(feature)
     }

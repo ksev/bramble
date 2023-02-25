@@ -7,8 +7,7 @@ use async_graphql::{Context, Object, Schema, SimpleObject, Subscription};
 use futures::{Stream, StreamExt};
 
 use crate::{
-    automation::Automation, bus::BUS, db, device::SOURCES, integration::zigbee2mqtt,
-    io::mqtt::MqttServerInfo, task::Task,
+    automation::Automation, integration::zigbee2mqtt, io::mqtt::MqttServerInfo, task::Task,
 };
 
 pub struct Query;
@@ -16,8 +15,9 @@ pub struct Query;
 #[Object]
 impl Query {
     /// Get all or a specific device
-    async fn device(&self, id: Option<String>) -> Result<Vec<Device>> {
-        let mut conn = db::connection().await?;
+    async fn device<'c>(&self, ctx: &Context<'c>, id: Option<String>) -> Result<Vec<Device>> {
+        let task = ctx.data_unchecked::<Task>();
+        let mut conn = task.db.acquire().await?;
 
         if let Some(id) = id {
             let device = crate::device::Device::load_by_id(&id, &mut conn).await?;
@@ -141,8 +141,9 @@ impl Device {
         self.borrow().parent.as_ref()
     }
     /// All the features a device exposes
-    async fn features(&self) -> Result<Vec<Feature>> {
-        let mut conn = db::connection().await?;
+    async fn features<'c>(&self, ctx: &Context<'c>) -> Result<Vec<Feature>> {
+        let task = ctx.data_unchecked::<Task>();
+        let mut conn = task.db.acquire().await?;
         let device_id = &self.borrow().id;
 
         let vec = crate::device::Feature::load_by_device(device_id, &mut conn)
@@ -183,10 +184,19 @@ impl<'a> Feature<'a> {
         &self.inner.meta
     }
     /// The current value of the feature, ONLY source features will have a value
-    async fn value(&self) -> Option<Value> {
-        SOURCES
-            .get(&(self.device_id.into(), self.inner.id.clone()))
-            .map(|r| r.clone().into())
+    async fn value<'c>(&self, ctx: &Context<'c>) -> Value {
+        let task = ctx.data_unchecked::<Task>();
+        task.sources
+            .get((self.device_id.into(), self.inner.id.clone()))
+            .clone()
+            .into()
+    }
+    /// Automation associated with this feature, ONLY sink features can have automations
+    async fn automate(&self) -> Option<serde_json::Value> {
+        self.inner
+            .automate
+            .as_ref()
+            .and_then(|a| serde_json::to_value(a).ok())
     }
 }
 
@@ -196,22 +206,30 @@ pub struct Mutation;
 impl Mutation {
     /// Create a new generic virtual device, this is just a recepticle to
     /// attach value buffers to
-    async fn generic_device(&self, name: String) -> Result<String> {
-        let mut conn = db::connection().await?;
+    async fn generic_device<'c>(&self, ctx: &Context<'c>, name: String) -> Result<String> {
+        let task = ctx.data_unchecked::<Task>();
+        let mut conn = task.db.acquire().await?;
         let dev = crate::device::Device::create_generic(name, &mut conn).await?;
 
-        Ok(dev.id.clone())
+        let id = dev.id.clone();
+
+        let shared = Arc::new(dev);
+        task.bus.device.add.publish(shared);
+
+        Ok(id)
     }
     /// Create a value buffer on the target device
     /// this device must exist
-    async fn value_buffer(
+    async fn value_buffer<'c>(
         &self,
+        ctx: &Context<'c>,
         device_id: String,
         name: String,
         kind: crate::device::ValueKind,
         meta: Option<BTreeMap<String, serde_json::Value>>,
     ) -> Result<String> {
-        let mut conn = db::connection().await?;
+        let task = ctx.data_unchecked::<Task>();
+        let mut conn = task.db.acquire().await?;
 
         let feature = crate::device::Feature::attach_virtual(
             &device_id,
@@ -221,6 +239,8 @@ impl Mutation {
             &mut conn,
         )
         .await?;
+
+        notify_device_changed(&device_id, task).await?;
 
         Ok(feature.id)
     }
@@ -233,31 +253,49 @@ impl Mutation {
         username: Option<String>,
         password: Option<String>,
     ) -> Result<Device> {
-        let server_info = MqttServerInfo::new(host, port.unwrap_or(1883), username, password);
-        let mut conn = db::connection().await?;
-
         let task = ctx.data_unchecked::<Task>();
+
+        let server_info = MqttServerInfo::new(host, port.unwrap_or(1883), username, password);
+        let mut conn = task.db.acquire().await?;
+
         let device = zigbee2mqtt::create_integration_device(server_info, task, &mut conn).await?;
 
         Ok(device.into())
     }
     /// Add or change automation for a feature
-    async fn automate(
+    async fn automate<'c>(
         &self,
+        ctx: &Context<'c>,
         device_id: String,
         feature_id: String,
         program: serde_json::Value,
     ) -> Result<usize> {
         let program: Automation = serde_json::from_value(program)?;
 
-        let mut conn = db::connection().await?;
+        program.compile(&device_id, &feature_id)?;
+
+        let task = ctx.data_unchecked::<Task>();
+
+        let mut conn = task.db.acquire().await?;
         let mut feature = crate::device::Feature::load(&device_id, &feature_id, &mut conn).await?;
 
         feature.automate = Some(program);
         feature.save(&device_id, &mut conn).await?;
 
+        notify_device_changed(&device_id, task).await?;
+
         Ok(0)
     }
+}
+
+// Helper fn to load a device and notify on the bus that it has changed
+async fn notify_device_changed(id: &str, task: &Task) -> Result<()> {
+    let mut conn = task.db.acquire().await?;
+
+    let device = crate::device::Device::load_by_id(&id, &mut conn).await?;
+    task.bus.device.add.publish(Arc::new(device));
+
+    Ok(())
 }
 
 pub struct Subscription;
@@ -266,19 +304,27 @@ pub struct Subscription;
 impl Subscription {
     /// Listen for updates to feature values on devices
     /// This will print out all updates on all devices
-    async fn values(&self) -> impl Stream<Item = ValueUpdate> {
+    async fn values<'c>(&'c self, ctx: &Context<'c>) -> impl Stream<Item = ValueUpdate> + 'c {
+        let task = ctx.data_unchecked::<Task>();
+
         tracing::debug!("GraphQL subscribe values");
-        BUS.device.value.subscribe().map(|(d, p, v)| ValueUpdate {
-            device: d,
-            feature: p,
-            value: v.into(),
-        })
+        task.bus
+            .device
+            .value
+            .subscribe()
+            .map(|(d, p, v)| ValueUpdate {
+                device: d,
+                feature: p,
+                value: v.into(),
+            })
     }
 
     /// Listen for changes in devices
-    async fn device(&self) -> impl Stream<Item = Device> {
+    async fn device<'c>(&'c self, ctx: &Context<'c>) -> impl Stream<Item = Device> + 'c {
+        let task = ctx.data_unchecked::<Task>();
+
         tracing::debug!("GraphQL subscribe device updates");
-        BUS.device.add.subscribe().map(|d| d.into())
+        task.bus.device.add.subscribe().map(|d| d.into())
     }
 }
 

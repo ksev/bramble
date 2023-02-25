@@ -12,9 +12,7 @@ use sqlx::SqliteConnection;
 use tracing::error;
 
 use crate::{
-    bus::BUS,
-    db,
-    device::{TaskSpec, SOURCES, FeatureValue},
+    device::{spawn_device_tasks, FeatureValue, TaskSpec},
     io::mqtt::{MqttServerInfo, MqttSubscribe},
     task::Task,
 };
@@ -35,22 +33,23 @@ pub async fn create_integration_device(
     };
 
     device.save(conn).await?;
-    device.spawn_tasks(task);
+
+    spawn_device_tasks(task, &device);
 
     let device = Arc::new(device);
 
-    device.clone().notify_changed();
+    task.bus.device.add.publish(device.clone());
 
     Ok(device)
 }
 
 pub async fn zigbee2mqtt_update(
     (parent, server): (String, MqttServerInfo),
-    mut t: Task,
+    task: Task,
 ) -> Result<()> {
-    let mut channel = BUS.mqtt.published.subscribe();
+    let mut channel = task.bus.mqtt.published.subscribe();
 
-    BUS.mqtt.subscribe.publish(MqttSubscribe {
+    task.bus.mqtt.subscribe.publish(MqttSubscribe {
         topic: "zigbee2mqtt/bridge/devices".into(),
         server: server.clone(),
     });
@@ -65,22 +64,21 @@ pub async fn zigbee2mqtt_update(
                 .into_iter()
                 .filter_map(|d| d.into_device(&parent, server.clone()));
 
-
             for (device, features) in iter {
-                let mut tx = db::begin().await?;
-                
+                let mut tx = task.db.begin().await?;
+
                 // Persist the device
                 device.save(&mut tx).await?;
 
                 for feature in features {
                     feature.save(&device.id, &mut tx).await?;
                 }
-                
+
                 tx.commit().await?;
 
-                device.spawn_tasks(&mut t);
+                spawn_device_tasks(&task, &device);
 
-                BUS.device.add.publish(Arc::new(device));
+                task.bus.device.add.publish(Arc::new(device));
             }
         }
     }
@@ -88,12 +86,12 @@ pub async fn zigbee2mqtt_update(
     Ok(())
 }
 
-pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
+pub async fn zigbee2mqtt_device(device_id: String, task: Task) -> Result<()> {
     // Get the devices and their features from the database
     let (device, features) = {
         use crate::device::{Device, Feature};
 
-        let mut conn = db::connection().await?;
+        let mut conn = task.db.acquire().await?;
         let device = Device::load_by_id(&device_id, &mut conn).await?;
         let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, &mut conn)
             .try_collect()
@@ -109,10 +107,12 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
     };
 
     // Subscribe to all messages we receive from MQTT servers
-    let mut channel = BUS.mqtt.published.subscribe();
+    let mut channel = task.bus.mqtt.published.subscribe();
 
     // Tell the MQTT worker that we want to subscribe to a server and topic
-    BUS.mqtt.subscribe.publish(subscribe.clone());
+    task.bus.mqtt.subscribe.publish(subscribe.clone());
+
+    let sources = &task.sources;
 
     while let Some((topic, data)) = channel.next().await {
         if topic != subscribe.topic {
@@ -135,7 +135,7 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
             let Some(mut value) = json.pointer(ptr) else {
                 // Set error in Sensor map
                 let v = FeatureValue::Err(format!("Invalid JSON pointer {}\n{:#?}", ptr, json));
-                SOURCES.set(key, v);
+                sources.set(key, v);
                 continue;
             };
 
@@ -144,12 +144,12 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
             if spec.kind == crate::device::ValueKind::Bool && !value.is_boolean() {
                 let Some(on) = spec.meta.get("value_on") else {
                     let v = FeatureValue::Err("meta value 'value_on' required for binary device".into());
-                    SOURCES.set(key, v);
+                    sources.set(key, v);
                     continue;
                 };
                 let Some(off) = spec.meta.get("value_off") else {
                     let v = FeatureValue::Err("meta value 'value_off' required for binary device".into());
-                    SOURCES.set(key, v);
+                    sources.set(key, v);
                     continue;
                 };
 
@@ -161,7 +161,7 @@ pub async fn zigbee2mqtt_device(device_id: String, _: Task) -> Result<()> {
             }
 
             let output = spec.validate(value);
-            SOURCES.set(key, output);
+            sources.set(key, output);
         }
     }
 

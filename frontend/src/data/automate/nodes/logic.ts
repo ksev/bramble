@@ -4,7 +4,7 @@ import type { NodePrototype } from "../node";
 
 export const AND: NodePrototype = {
     label: "And",
-    properties: "And",
+    properties: { tag: "And" },
     icon: "logic-and",
     color: colors.bool,
     inputs: [{
@@ -14,7 +14,7 @@ export const AND: NodePrototype = {
         multiple: true,
     }],
     outputs: [{
-        id: "output",
+        id: "result",
         label: "Result",
         kind: ValueKind.Bool,
     }]
@@ -22,7 +22,7 @@ export const AND: NodePrototype = {
 
 export const OR: NodePrototype = {
     label: "Or",
-    properties: "Or",
+    properties: { tag: "Or" },
     icon: "logic-or",
     color: colors.bool,
     inputs: [{
@@ -32,7 +32,7 @@ export const OR: NodePrototype = {
         multiple: true,
     }],
     outputs: [{
-        id: "output",
+        id: "result",
         label: "Result",
         kind: ValueKind.Bool,
     }]
@@ -40,7 +40,7 @@ export const OR: NodePrototype = {
 
 export const XOR: NodePrototype = {
     label: "Xor",
-    properties: "Xor",
+    properties: { tag: "Xor" },
     icon: "logic-xor",
     color: colors.bool,
     inputs: [{
@@ -58,7 +58,7 @@ export const XOR: NodePrototype = {
 
 export const NOT: NodePrototype = {
     label: "Not",
-    properties: "Not",
+    properties: { tag: "Not" },
     icon: "logic-not",
     color: colors.bool,
     inputs: [{

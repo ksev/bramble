@@ -1,12 +1,7 @@
-use dashmap::{DashMap, mapref::one::Ref};
-use once_cell::sync::Lazy;
+use dashmap::{mapref::one::Ref, DashMap};
 use tracing::debug;
 
-use crate::bus::BUS;
-
 use super::FeatureValue;
-
-pub static SOURCES: Lazy<Sources> = Lazy::new(Sources::default);
 
 /// Sources a struct that keeps all the current values from all the sources the application know about
 #[derive(Default)]
@@ -25,16 +20,20 @@ impl Sources {
         if !same {
             debug!("{:?} update source {:?}", key, value);
 
-            BUS.device
-                .value
-                .publish((key.0.clone(), key.1.clone(), value.clone()));
-
+            /*
+                        BUS.device
+                            .value
+                            .publish((key.0.clone(), key.1.clone(), value.clone()));
+            */
             self.storage.insert(key, value);
         }
     }
 
-    pub fn get(&self, key: &(String, String)) -> Option<Ref<(String, String), FeatureValue>> {
-        self.storage.get(key)
+    pub fn get(&self, key: (String, String)) -> Ref<(String, String), FeatureValue> {
+        self.storage
+            .entry(key)
+            .or_insert(Ok(serde_json::Value::Null))
+            .downgrade()
     }
 
     /*

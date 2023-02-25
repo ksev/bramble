@@ -19,8 +19,9 @@ export const GetAllDevices = gql`
 					... on Err {
 						message
 					}
-				}
-			}
+				},
+				automate
+			},
 		}
 	}
 `;
@@ -36,7 +37,8 @@ export const GetDevice = gql`
 				name,
 				direction,
 				kind,
-				meta
+				meta,
+				automate
 			}
 		}
 	}
@@ -71,7 +73,8 @@ export const DeviceUpdates = gql`
 				name,
 				direction,
 				kind,
-				meta
+				meta,
+				automate
 			}
 		}
 	}

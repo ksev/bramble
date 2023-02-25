@@ -1,12 +1,8 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use futures::Stream;
 use serde_derive::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteConnection};
 use uuid::Uuid;
-
-use crate::{bus::BUS, task::Task};
 
 use super::TaskSpec;
 
@@ -25,36 +21,6 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn spawn_tasks(&self, task: &Task) {
-        for spec in &self.task_spec {
-            match spec {
-                TaskSpec::Zigbee2Mqtt(server) => {
-                    let label = format!("zigbee2mqtt:{}:{}", server.host, server.port);
-
-                    if task.has_task(&label) {
-                        // There is no need to reboot the task just ignore
-                        continue;
-                    }
-
-                    task.spawn_with_argument(
-                        label,
-                        (self.id.clone(), server.clone()),
-                        crate::integration::zigbee2mqtt::zigbee2mqtt_update,
-                    );
-                }
-                TaskSpec::Zigbee2MqttDevice(_) => {
-                    let label = format!("{}/Zigbee2MqttDevice", self.id);
-
-                    task.spawn_with_argument(
-                        label,
-                        self.id.clone(),
-                        crate::integration::zigbee2mqtt::zigbee2mqtt_device,
-                    )
-                }
-            }
-        }
-    }
-
     /// Save the device to storage
     pub async fn save(&self, conn: &mut SqliteConnection) -> Result<()> {
         sqlx::query(include_str!("../../sql/device_insert.sql"))
@@ -110,7 +76,7 @@ impl Device {
     }
 
     /// High level call to create a generic device save to database and notify on the device bus that a device was added
-    pub async fn create_generic(name: String, conn: &mut SqliteConnection) -> Result<Arc<Device>> {
+    pub async fn create_generic(name: String, conn: &mut SqliteConnection) -> Result<Device> {
         let id = Uuid::new_v4().to_string();
 
         let device = Device {
@@ -125,16 +91,7 @@ impl Device {
 
         device.save(conn).await?;
 
-        let shared = Arc::new(device);
-
-        shared.clone().notify_changed();
-
-        Ok(shared)
-    }
-
-    /// Notify that this device has changed
-    pub fn notify_changed(self: Arc<Self>) {
-        BUS.device.add.publish(self)
+        Ok(device)
     }
 }
 

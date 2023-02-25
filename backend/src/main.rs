@@ -1,7 +1,6 @@
 mod api;
 mod automation;
 mod bus;
-mod db;
 mod device;
 mod http;
 mod integration;
@@ -12,6 +11,9 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
+use bus::GlobalBus;
+use device::Sources;
+use sqlx::sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqlitePoolOptions};
 use task::Task;
 
 #[tokio::main]
@@ -24,10 +26,21 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    let mut connection = db::connection().await?;
+    let options = SqliteConnectOptions::from_str("sqlite:rome.sqlite3")?
+        .create_if_missing(true)
+        .auto_vacuum(SqliteAutoVacuum::Full);
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(3)
+        .connect_with(options)
+        .await?;
+
+    let mut connection = pool.acquire().await?;
     sqlx::migrate!().run(&mut connection).await?;
 
-    task::create_group(init).complete().await?;
+    task::create_group(init, pool, Sources::default(), GlobalBus::default())
+        .complete()
+        .await?;
 
     Ok(())
 }

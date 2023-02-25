@@ -43,7 +43,6 @@ function* collectDevices() {
 
 const LOGICITEMS: MenuItem[] = [
     BACK_ITEM,
-    
     {
         text: "And",
         icon: "logic-and",
@@ -52,13 +51,12 @@ const LOGICITEMS: MenuItem[] = [
             fn: (ctx: Context) => ctx.nodes.add(logic.AND),
         },
     },
-    /*
     {
         text: "Or",
         icon: "logic-or",
         action: {
             type: "load",
-            fn: (ctx: Context) => ctx.nodes.add(BOOL_LOGIC.or),
+            fn: (ctx: Context) => ctx.nodes.add(logic.OR),
         },
     },
     {
@@ -66,7 +64,7 @@ const LOGICITEMS: MenuItem[] = [
         icon: "logic-not",
         action: {
             type: "load",
-            fn: (ctx: Context) => ctx.nodes.add(BOOL_LOGIC.not),
+            fn: (ctx: Context) => ctx.nodes.add(logic.NOT),
         },
     },
     {
@@ -74,10 +72,9 @@ const LOGICITEMS: MenuItem[] = [
         icon: "logic-xor",
         action: {
             type: "load",
-            fn: (ctx: Context) => ctx.nodes.add(BOOL_LOGIC.xor),
+            fn: (ctx: Context) => ctx.nodes.add(logic.XOR),
         },
     }
-    */
 ];
 
 const NUMBERSITEMS: MenuItem[] = [

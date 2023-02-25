@@ -9,10 +9,28 @@ import { SlotRef, type Connection, type IncompleteConnection, type Node, type No
  **/
 export const key = Symbol('automate');
 
+export interface ContextInit {
+    counter: number,
+    nodes: Node[],
+    connections: Connection[],
+    positions: [number, Point][],
+
+    deviceId: string,
+    feature: string
+}
+
 /**
  * Context that exists in the Automation tool and it's sub widgets
  */
 export class Context {
+    /**
+     * Which device we are making a Automation program for
+     */
+    public readonly deviceId: string
+    /**
+     * Which feature we are making a Automation program for
+     */
+    public readonly feature: string
     /**
      * Where the context menu should be shown, of null if no menu
      */
@@ -52,19 +70,24 @@ export class Context {
 
     private anchorMap = new Map<string, Writable<Point>>;
 
-    constructor(viewPointer: Readable<Point>, pointer: Readable<Point>) {
+    constructor(init: ContextInit, pointer: Readable<Point>, viewPointer: Readable<Point>) {
         this.contextMenu = writable(null);
+        this.deviceId = init.deviceId;
+        this.feature = init.feature;
 
         this.pointer = pointer;
         this.viewPointer = viewPointer;
 
         this.blockPan = writable(false);
         
-        this.layout = new Map();
+        this.layout = new Map(map(
+            init.positions, 
+            ([n, p]) => [n, layoutStore(new Rect(p, new Extent(0, 0)))]
+        ));
 
         this.selected = selectedStore(this);
-        this.nodes = nodeStore(this, 0);
-        this.connections = connectionStore(this);
+        this.nodes = nodeStore(this, init);
+        this.connections = connectionStore(this, init);
         this.startedConnection = writable(null);
     }
 
@@ -100,8 +123,8 @@ export interface NodeLayout {
  * Build context for the Automation tool and it's sub widgets
  * ONLY call this from the top level Automate widget
  */
-export function buildContext(viewPointer: Readable<Point>, pointer: Readable<Point>): Context {
-    return setContext<Context>(key, new Context(viewPointer, pointer));
+export function buildContext(init: ContextInit, pointer: Readable<Point>, viewPointer: Readable<Point>): Context {
+    return setContext<Context>(key, new Context(init, pointer, viewPointer));
 }
 
 export type SelectedStore = ReturnType<typeof selectedStore>;
@@ -193,11 +216,11 @@ export function selectedStore(ctx: Context) {
 
 export type NodeStore = ReturnType<typeof nodeStore>;
 
-export function nodeStore(ctx: Context, counter: number) {
-    const backend = new Map<number, Node>();
-    const {subscribe, set} = writable([]);
+export function nodeStore(ctx: Context, init: ContextInit) {
+    const backend = new Map<number, Node>(map(init.nodes, n => [n.id, n]));
+    const {subscribe, set} = writable(init.nodes);
 
-    let n = counter; 
+    let n = init.counter; 
 
     return {
         subscribe,
@@ -352,11 +375,9 @@ export function layoutStore(initialData: Rect) {
 
 export type ConnectionStore = ReturnType<typeof connectionStore>;
 
-function connectionStore(ctx: Context) {
+function connectionStore(ctx: Context, init: ContextInit) {
     const outgoing = new Map<string, Set<string>>();
     const incoming = new Map<string, Set<string>>();
-
-    const {subscribe, set:write} = writable<Connection[]>([]);
 
     function* get(slot: SlotRef) {
         const sslot = slot.toString();
@@ -384,6 +405,28 @@ function connectionStore(ctx: Context) {
         }
     }
 
+    for (const {from, to} of init.connections) {
+        const sfrom = from.toString();
+        const sto = to.toString();
+
+        if (!outgoing.has(sfrom)) {
+            outgoing.set(sfrom, new Set([sto]));
+        } else {
+            const remote = outgoing.get(sfrom);
+            remote.add(sto);
+        }
+
+        if (!incoming.has(sto)) {
+            incoming.set(sto, new Set([sfrom]));
+        } else {
+            const remote = incoming.get(sto);
+            remote.add(sfrom);
+        } 
+    }
+
+    
+    const {subscribe, set:write} = writable<Connection[]>(Array.from(all()));
+    
     return {
         all,
         connectionCount: (ref: SlotRef) => {

@@ -64,7 +64,7 @@
 
     <div class="link">
         <a href={`#/device/${deviceId}/${spec.id}/automate`} title={`Automate ${spec.name}!`}>
-            <Icon name="settings-automation" color={undefined}  size={20} />
+            <Icon name="settings-automation" color={spec.automate ? "#fff" : Colors.icon}  size={20} />
         </a>
     </div>
 

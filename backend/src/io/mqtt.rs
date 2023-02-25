@@ -7,10 +7,7 @@ use rumqttc::{AsyncClient, ConnAck, Event, EventLoop, MqttOptions, Packet};
 use serde_derive::{Deserialize, Serialize};
 use tokio::time::timeout;
 
-use crate::{
-    bus::{Topic, BUS},
-    task::Task,
-};
+use crate::{bus::Topic, task::Task};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct MqttServerInfo {
@@ -70,9 +67,9 @@ pub struct MqttBus {
 /**
  * A task to manage connection going out to many different MQTT server, we connect and subscribe to the first topic at the same time
  */
-pub async fn manage_connections(_: Task) -> Result<()> {
+pub async fn manage_connections(t: Task) -> Result<()> {
     let mut connections: HashMap<MqttServerInfo, AsyncClient> = HashMap::new();
-    let mut channel = BUS.mqtt.subscribe.subscribe();
+    let mut channel = t.bus.mqtt.subscribe.subscribe();
 
     while let Some(sub) = channel.next().await {
         let key = sub.server.clone();
@@ -84,10 +81,12 @@ pub async fn manage_connections(_: Task) -> Result<()> {
         } else {
             let (client, mut eventloop) = connect(&sub.server).await?;
 
+            let bus = t.bus.clone();
+
             tokio::spawn(async move {
                 while let Ok(notification) = eventloop.poll().await {
                     if let Event::Incoming(Packet::Publish(p)) = notification {
-                        BUS.mqtt.published.publish((p.topic, p.payload));
+                        bus.mqtt.published.publish((p.topic, p.payload));
                     }
                 }
 

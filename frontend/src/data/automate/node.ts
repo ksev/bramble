@@ -2,13 +2,15 @@ import type { Feature } from "$data/api";
 import colors, { Color, directionColor } from "$data/colors";
 import { ValueKind, type Device } from "$data/api";
 import { SvelteComponentTyped,  type ComponentProps, type ComponentType } from "svelte";
-import { Context } from "./automate";
 
 export interface Node {
     // Monotonic id of node
     id: number,
     // Type of node 
-    properties: string | any,
+    properties: {
+        tag: string,
+        content?: any,
+    },
     // Node label, shown in the box handle 
     label: string
     // Color of the box handle
@@ -61,6 +63,8 @@ export class SlotRef {
         return new SlotRef(nodeId, name);
     }
 
+    static fromTuple = ([nodeId, name]: [number, string]) => new SlotRef(nodeId, name);
+
     same(other: SlotRef): boolean {
         return this.name === other.name &&
         this.nodeId === other.nodeId;
@@ -82,7 +86,7 @@ export interface IncompleteConnection {
 
 export const automationTarget = (name: string, feature: Feature): NodePrototype  => ({
     label: name,
-    properties: "Target",
+    properties: { tag: "Target" },
     color: directionColor(feature.direction),
     icon: "settings-automation",
     target: true,
@@ -256,9 +260,8 @@ export function deviceNode(device: Device): NodePrototype {
 
     return {
         properties: {
-            "Device": {
-                "id": device.id,
-            }
+            "tag": "Device",
+            "content": device.id,
         },
         label: device.name,
         color: colors.device,
