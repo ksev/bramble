@@ -7,7 +7,11 @@ use async_graphql::{Context, Object, Schema, SimpleObject, Subscription};
 use futures::{Stream, StreamExt};
 
 use crate::{
-    automation::Automation, integration::zigbee2mqtt, io::mqtt::MqttServerInfo, task::Task,
+    automation::Automation,
+    device::{spawn_automation_task, SourceId},
+    integration::zigbee2mqtt,
+    io::mqtt::MqttServerInfo,
+    task::Task,
 };
 
 pub struct Query;
@@ -186,10 +190,10 @@ impl<'a> Feature<'a> {
     /// The current value of the feature, ONLY source features will have a value
     async fn value<'c>(&self, ctx: &Context<'c>) -> Value {
         let task = ctx.data_unchecked::<Task>();
-        task.sources
-            .get((self.device_id.into(), self.inner.id.clone()))
-            .clone()
-            .into()
+
+        let id = SourceId::new(self.device_id, &self.inner.id);
+
+        task.sources.get(id).clone().into()
     }
     /// Automation associated with this feature, ONLY sink features can have automations
     async fn automate(&self) -> Option<serde_json::Value> {
@@ -270,11 +274,13 @@ impl Mutation {
         feature_id: String,
         program: serde_json::Value,
     ) -> Result<usize> {
+        let task = ctx.data_unchecked::<Task>();
+
         let program: Automation = serde_json::from_value(program)?;
 
-        program.compile(&device_id, &feature_id)?;
+        let target = SourceId::new(&device_id, &feature_id);
 
-        let task = ctx.data_unchecked::<Task>();
+        spawn_automation_task(task, target, &program)?;
 
         let mut conn = task.db.acquire().await?;
         let mut feature = crate::device::Feature::load(&device_id, &feature_id, &mut conn).await?;
@@ -312,9 +318,9 @@ impl Subscription {
             .device
             .value
             .subscribe()
-            .map(|(d, p, v)| ValueUpdate {
-                device: d,
-                feature: p,
+            .map(|(id, v)| ValueUpdate {
+                device: id.device.into(),
+                feature: id.feature.into(),
                 value: v.into(),
             })
     }

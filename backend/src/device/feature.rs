@@ -99,6 +99,17 @@ impl Feature {
         Ok(fet)
     }
 
+    pub fn load_automations(
+        conn: &mut SqliteConnection,
+    ) -> impl Stream<Item = Result<(String, String, Automation), sqlx::Error>> + '_ {
+        sqlx::query(include_str!("../../sql/feature_automation.sql"))
+            .try_map(|row: SqliteRow| {
+                let auto: Json<Automation> = row.try_get("automate")?;
+                Ok((row.try_get("device")?, row.try_get("id")?, auto.0))
+            })
+            .fetch(conn)
+    }
+
     /// Save a value spec
     pub async fn save(&self, device_id: &str, conn: &mut SqliteConnection) -> Result<()> {
         sqlx::query(include_str!("../../sql/feature_insert.sql"))

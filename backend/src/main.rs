@@ -5,6 +5,7 @@ mod device;
 mod http;
 mod integration;
 mod io;
+mod strings;
 mod task;
 
 use std::str::FromStr;
@@ -38,7 +39,10 @@ async fn main() -> Result<()> {
     let mut connection = pool.acquire().await?;
     sqlx::migrate!().run(&mut connection).await?;
 
-    task::create_group(init, pool, Sources::default(), GlobalBus::default())
+    let bus = GlobalBus::default();
+    let sources = Sources::new(bus.device.value.clone());
+
+    task::create_group(init, pool, sources, bus)
         .complete()
         .await?;
 

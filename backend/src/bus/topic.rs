@@ -7,6 +7,7 @@ use tokio::sync::Notify;
 
 use super::{Subscriber, Subscription};
 
+#[derive(Clone)]
 pub struct Topic<T> {
     subs: Arc<Mutex<SlotMap<DefaultKey, Subscriber<T>>>>,
     notify: Arc<Notify>,

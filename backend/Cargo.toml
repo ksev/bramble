@@ -9,6 +9,7 @@ edition = "2021"
 sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "json"] }
 uuid = { version = "1.2.2", features = [ "v4", "fast-rng" ] }
 slotmap = "1.0.6"
+once_cell = "1.17.1"
 futures = "0.3.25"
 dashmap = "5.4.0"
 flume = "0.10.14"
@@ -28,5 +29,4 @@ async-graphql = "5.0.4"
 async-graphql-axum = "5.0.4"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
 tower-http = { version = "0.3.5", features = ["fs", "trace", "cors"] }
-string-interner = "0.14.0"
-
+symbol_table = "0.3.0"

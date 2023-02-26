@@ -12,8 +12,9 @@ use sqlx::SqliteConnection;
 use tracing::error;
 
 use crate::{
-    device::{spawn_device_tasks, FeatureValue, TaskSpec},
+    device::{spawn_device_tasks, FeatureValue, SourceId, TaskSpec},
     io::mqtt::{MqttServerInfo, MqttSubscribe},
+    strings::IString,
     task::Task,
 };
 
@@ -86,13 +87,13 @@ pub async fn zigbee2mqtt_update(
     Ok(())
 }
 
-pub async fn zigbee2mqtt_device(device_id: String, task: Task) -> Result<()> {
+pub async fn zigbee2mqtt_device(device_id: IString, task: Task) -> Result<()> {
     // Get the devices and their features from the database
     let (device, features) = {
         use crate::device::{Device, Feature};
 
         let mut conn = task.db.acquire().await?;
-        let device = Device::load_by_id(&device_id, &mut conn).await?;
+        let device = Device::load_by_id(device_id.into(), &mut conn).await?;
         let features: Vec<Feature> = Feature::load_by_device_readable(&device.id, &mut conn)
             .try_collect()
             .await?;
@@ -130,7 +131,7 @@ pub async fn zigbee2mqtt_device(device_id: String, task: Task) -> Result<()> {
 
         for spec in &features {
             let ptr = &format!("/{}", spec.id);
-            let key = (device.id.clone(), spec.id.clone());
+            let key = SourceId::new(device_id, &spec.id);
 
             let Some(mut value) = json.pointer(ptr) else {
                 // Set error in Sensor map

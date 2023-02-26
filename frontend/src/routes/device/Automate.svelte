@@ -38,7 +38,7 @@
             "Or": async () => OR,
             "Not": async () => NOT,
             "Xor": async () => XOR,
-            "Device": async ({ id }: {id: string}) => {
+            "Device": async (id) => {
                 const target = await devices.byId(id);
                 return deviceNode(target); 
             } 

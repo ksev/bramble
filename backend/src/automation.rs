@@ -9,20 +9,22 @@ use serde_json::Value as Json;
 
 use crate::{
     bus::Topic,
-    device::{FeatureValue, Sources},
+    device::{FeatureValue, SourceId, Sources},
+    strings::IString,
 };
 
 type Slot = (u64, String);
+type Connection = (Slot, Slot);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Automation {
     counter: u64,
     nodes: Vec<Node>,
-    connections: Vec<(Slot, Slot)>,
+    connections: Vec<Connection>,
 }
 
 impl Automation {
-    pub fn compile(&self, device_id: &str, feature_id: &str) -> Result<Program> {
+    pub fn compile(&self, target: SourceId) -> Result<(Program, Vec<SourceId>)> {
         let target_count = self
             .nodes
             .iter()
@@ -41,7 +43,15 @@ impl Automation {
         // We might optimise away the program
         if self.connections.is_empty() {
             // There are no connections, program is useless but valid
-            return Ok(Program::new(vec![], vec![])?);
+            return Ok((Program::new(vec![], vec![])?, vec![]));
+        }
+
+        let dependencies = find_dependencies(&node, &connections);
+
+        // The is a program but it does not react to any data, so again useless
+        if dependencies.is_empty() {
+            // There are no connections, program is useless but valid
+            return Ok((Program::new(vec![], vec![])?, vec![]));
         }
 
         // Program only works on idecies and not the id field
@@ -49,13 +59,12 @@ impl Automation {
 
         let connections = connections
             .iter()
-            .cloned()
             // Rewrite Automation node id to Program node index
             .map(|(fr, to)| {
                 let (fid, fslot) = fr;
                 let (tid, tslot) = to;
 
-                ((idx[&fid], fslot), (idx[&tid], tslot))
+                ((idx[&fid], fslot.into()), (idx[&tid], tslot.into()))
             })
             .collect();
 
@@ -65,8 +74,8 @@ impl Automation {
             .map(|prop| {
                 use Properties::*;
                 match prop {
-                    Target => bnode(nodes::Target::new(device_id.into(), feature_id.into())),
-                    Device(id) => bnode(nodes::Device::new(id.clone())),
+                    Target => bnode(nodes::Target::new(target)),
+                    Device(id) => bnode(nodes::Device::new(id.into())),
                     And => bnode(nodes::And),
                     Or => bnode(nodes::Or),
                     Not => bnode(nodes::Not),
@@ -75,14 +84,14 @@ impl Automation {
             })
             .collect();
 
-        Ok(Program::new(steps, connections)?)
+        Ok((Program::new(steps, connections)?, dependencies))
     }
 }
 
 fn filter_unconnected<'a>(
     nodes: &'a [&'a Node],
-    connections: &'a [(Slot, Slot)],
-) -> (Vec<&'a Node>, Vec<(Slot, Slot)>) {
+    connections: &'a [Connection],
+) -> (Vec<&'a Node>, Vec<Connection>) {
     let mut incoming: HashMap<u64, BTreeSet<u64>> = HashMap::new();
 
     for ((f, _), (t, _)) in connections {
@@ -119,8 +128,8 @@ fn filter_unconnected<'a>(
 
 fn merge_device_nodes<'a>(
     nodes: &'a [&'a Node],
-    connections: &'a [(Slot, Slot)],
-) -> (Vec<&'a Node>, Vec<(Slot, Slot)>) {
+    connections: &'a [Connection],
+) -> (Vec<&'a Node>, Vec<Connection>) {
     let mut first = HashMap::new();
     let mut re = HashMap::new();
 
@@ -158,6 +167,27 @@ fn merge_device_nodes<'a>(
         .collect();
 
     (nodes, connections)
+}
+
+fn find_dependencies<'a>(nodes: &'a [&'a Node], connections: &'a [Connection]) -> Vec<SourceId> {
+    let mut outgoing: HashMap<u64, BTreeSet<&str>> = HashMap::new();
+
+    for ((f, fs), _) in connections {
+        outgoing.entry(*f).or_default().insert(fs);
+    }
+
+    nodes
+        .iter()
+        .filter_map(|n| match &n.properties {
+            Properties::Device(d) => Some((n.id.clone(), d)),
+            _ => None,
+        })
+        .filter_map(|(id, dev)| Some((outgoing.get(&id)?, dev)))
+        .flat_map(|(set, dev)| {
+            let dev: IString = dev.into();
+            set.iter().map(move |&slot| SourceId::new(dev, slot))
+        })
+        .collect()
 }
 
 fn unique_connections<'a>(connections: &'a [(Slot, Slot)]) -> Vec<(Slot, Slot)> {
@@ -254,11 +284,11 @@ where
 }
 
 pub struct Context<'a> {
-    pub set_value: &'a Topic<(String, String, FeatureValue)>,
+    pub set_value: &'a Topic<(SourceId, FeatureValue)>,
     pub sources: &'a Sources,
 }
 
-pub trait ProgramNode: std::fmt::Debug {
+pub trait ProgramNode: Send + std::fmt::Debug {
     fn run(&mut self, context: &Context, slots: &mut Slots) -> Result<()>;
 }
 
@@ -273,8 +303,8 @@ where
 pub struct Program {
     nodes: Vec<Box<dyn ProgramNode>>,
 
-    outputs: MVec<String>,
-    inputs: MVec<(String, usize)>,
+    outputs: MVec<IString>,
+    inputs: MVec<(IString, usize)>,
     input_value_index: MVec<usize>,
 
     values: Vec<Json>,
@@ -283,13 +313,13 @@ pub struct Program {
 impl Program {
     pub fn new(
         nodes: Vec<Box<dyn ProgramNode>>,
-        connections: Vec<((usize, String), (usize, String))>,
+        connections: Vec<((usize, IString), (usize, IString))>,
     ) -> Result<Program> {
         // Make sure we execute the nodes in the right order
         let (nodes, connections) = topological_sort(nodes, connections)?;
 
-        let mut incoming: HashMap<usize, BTreeMap<&str, Vec<(usize, &str)>>> = HashMap::new();
-        let mut outgoing: HashMap<usize, BTreeSet<&str>> = HashMap::new();
+        let mut incoming: HashMap<usize, BTreeMap<IString, Vec<(usize, IString)>>> = HashMap::new();
+        let mut outgoing: HashMap<usize, BTreeSet<IString>> = HashMap::new();
 
         // Node output slot id to value index cache
         //let mut vi = BTreeMap::new();
@@ -301,13 +331,13 @@ impl Program {
             incoming
                 .entry(*t)
                 .or_default()
-                .entry(ts)
+                .entry(*ts)
                 .or_default()
-                .push((*f, fs));
+                .push((*f, *fs));
 
             // For outputs we only need two know the name of the outputs on each node
             // to build the index
-            outgoing.entry(*f).or_default().insert(fs);
+            outgoing.entry(*f).or_default().insert(*fs);
         }
 
         let mut outputs = MVec::new();
@@ -349,14 +379,12 @@ impl Program {
             input_value_index,
         };
 
-        println!("{p:#?}");
-
         Ok(p)
     }
 
     pub fn execute(
         &mut self,
-        set_value: &Topic<(String, String, FeatureValue)>,
+        set_value: &Topic<(SourceId, FeatureValue)>,
         sources: &Sources,
     ) -> Result<()> {
         // Reset data from the last run
@@ -386,10 +414,10 @@ impl Program {
 
 fn topological_sort(
     nodes: Vec<Box<dyn ProgramNode>>,
-    connections: Vec<((usize, String), (usize, String))>,
+    connections: Vec<((usize, IString), (usize, IString))>,
 ) -> Result<(
     Vec<Box<dyn ProgramNode>>,
-    Vec<((usize, String), (usize, String))>,
+    Vec<((usize, IString), (usize, IString))>,
 )> {
     let mut incoming: HashMap<usize, BTreeSet<usize>> = HashMap::new();
     let mut outgoing: HashMap<usize, BTreeSet<usize>> = HashMap::new();
@@ -463,8 +491,8 @@ fn topological_sort(
 pub struct Slots<'a> {
     index: usize,
 
-    outputs: &'a MVec<String>,
-    inputs: &'a MVec<(String, usize)>,
+    outputs: &'a MVec<IString>,
+    inputs: &'a MVec<(IString, usize)>,
     input_value_index: &'a MVec<usize>,
 
     values: &'a mut [Json],
@@ -479,25 +507,33 @@ impl Slots<'_> {
         outputs
             .iter()
             .zip(vals)
-            .map(|(n, v)| Output { id: n, value: v })
+            .map(|(n, v)| Output { id: *n, value: v })
     }
 
-    pub fn output(&mut self, id: &str, value: Json) {
+    pub fn output<T>(&mut self, id: T, value: Json)
+    where
+        T: Into<IString>,
+    {
+        let id = id.into();
         let start = self.outputs.range(self.index).start;
         let outputs = &self.outputs[self.index];
 
-        let idx = outputs.iter().position(|s| s == id);
+        let idx = outputs.iter().position(|s| *s == id);
 
         if let Some(idx) = idx {
             self.values[start + idx] = value;
         }
     }
 
-    pub fn input(&self, id: &str) -> Result<impl Iterator<Item = &Json>> {
+    pub fn input<T>(&self, id: T) -> Result<impl Iterator<Item = &Json>>
+    where
+        T: Into<IString>,
+    {
+        let id = id.into();
         let inputs = &self.inputs[self.index];
 
-        let Some((_, value_index)) = inputs.iter().find(|(s, _)| s == id) else {
-            anyhow::bail!("no input named {}", id);  
+        let Some((_, value_index)) = inputs.iter().find(|(s, _)| *s == id) else {
+            anyhow::bail!("no input named {:?}", id);  
         };
 
         let iter = self.input_value_index[*value_index]
@@ -507,18 +543,18 @@ impl Slots<'_> {
         Ok(iter)
     }
 
-    pub fn inputs(&self) -> impl Iterator<Item = &str> {
-        self.inputs[self.index].iter().map(|(id, _)| id.as_str())
+    pub fn inputs<'a>(&'a self) -> impl Iterator<Item = IString> + 'a {
+        self.inputs[self.index].iter().map(|(id, _)| *id)
     }
 }
 
 pub struct Output<'a> {
-    id: &'a str,
+    id: IString,
     value: &'a mut Json,
 }
 
 impl Output<'_> {
-    pub fn id(&self) -> &str {
+    pub fn id(&self) -> IString {
         self.id
     }
 
@@ -531,15 +567,17 @@ mod nodes {
     use anyhow::Result;
     use serde_json::{json, Value as Json};
 
+    use crate::{device::SourceId, strings::IString};
+
     use super::{Context, ProgramNode, Slots};
 
     #[derive(Debug)]
     pub struct Device {
-        id: String,
+        id: IString,
     }
 
     impl Device {
-        pub fn new(id: String) -> Device {
+        pub fn new(id: IString) -> Device {
             Device { id }
         }
     }
@@ -547,7 +585,8 @@ mod nodes {
     impl ProgramNode for Device {
         fn run(&mut self, context: &Context, slots: &mut Slots) -> Result<()> {
             for mut slot in slots.outputs() {
-                let current = context.sources.get((self.id.clone(), slot.id().into()));
+                let id = SourceId::new(self.id, slot.id());
+                let current = context.sources.get(id);
 
                 match current.value() {
                     Ok(js) => slot.write(js.clone()),
@@ -561,20 +600,18 @@ mod nodes {
 
     #[derive(Debug)]
     pub struct Target {
-        id: (String, String),
+        id: SourceId,
     }
 
     impl Target {
-        pub fn new(device_id: String, feature_id: String) -> Target {
-            Target {
-                id: (device_id, feature_id),
-            }
+        pub fn new(id: SourceId) -> Target {
+            Target { id }
         }
     }
 
     impl ProgramNode for Target {
         fn run(&mut self, _: &Context, slots: &mut Slots) -> Result<()> {
-            let v = slots.input(&self.id.1)?.next().unwrap_or(&Json::Null);
+            let v = slots.input(self.id.feature)?.next().unwrap_or(&Json::Null);
 
             println!("Target {v:?}");
 
@@ -698,15 +735,16 @@ mod test {
             connections,
         };
 
-        let mut program = auto.compile("", "state").unwrap();
+        let target = SourceId::new("", "state");
+        let (mut program, _) = auto.compile(target).unwrap();
 
         let t = Topic::default();
 
-        let sources = Sources::default();
+        let sources = Sources::new(t.clone());
 
-        sources.set(("amk".into(), "state".into()), Ok(json!(true)));
-        sources.set(("amk".into(), "state_two".into()), Ok(json!(false)));
-        sources.set(("two".into(), "state".into()), Ok(json!(false)));
+        sources.set(SourceId::new("amk", "state"), Ok(json!(true)));
+        sources.set(SourceId::new("amk", "state_two"), Ok(json!(false)));
+        sources.set(SourceId::new("two", "state"), Ok(json!(false)));
 
         program.execute(&t, &sources).unwrap();
     }
@@ -716,9 +754,29 @@ mod test {
         let p = r#"{"counter":6,"nodes":[{"id":0,"position":[6355,6027],"properties":{"tag":"Target"}},{"id":1,"position":[5415,5651],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":2,"position":[5418,5902],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":3,"position":[5433,6145],"properties":{"tag":"Device","content":"0x00158d00075a4e9c"}},{"id":4,"position":[5769,6041],"properties":{"tag":"Or"}},{"id":5,"position":[6055,5905],"properties":{"tag":"And"}}],"connections":[[[3,"occupancy"],[4,"input"]],[[2,"occupancy"],[4,"input"]],[[2,"occupancy"],[5,"input"]],[[4,"result"],[5,"input"]],[[5,"result"],[0,"state"]],[[1,"occupancy"],[5,"input"]]]}"#;
         let auto: Automation = serde_json::de::from_str(&p).unwrap();
 
-        let program = auto.compile("", "state").unwrap();
+        let target = SourceId::new("", "state");
+        let (program, _) = auto.compile(target).unwrap();
 
         // We have a duplicate device node in the Automation, the compile should merge them
         assert_eq!(program.values.len(), 4);
+    }
+
+    #[test]
+    fn dependency_list() {
+        let p = r#"{"counter":6,"nodes":[{"id":0,"position":[6113,5917],"properties":{"tag":"Target"}},{"id":3,"position":[5840,5917],"properties":{"tag":"Or"}},{"id":4,"position":[5439,5761],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":5,"position":[5432,5995],"properties":{"tag":"Device","content":"0x00158d00075a4e9c"}}],"connections":[[[3,"result"],[0,"state"]],[[4,"occupancy"],[3,"input"]],[[5,"occupancy"],[3,"input"]],[[4,"illuminance_above_threshold"],[3,"input"]]]}"#;
+
+        let auto: Automation = serde_json::de::from_str(&p).unwrap();
+
+        let target = SourceId::new("", "state");
+        let (_, deps) = auto.compile(target).unwrap();
+
+        assert_eq!(
+            deps.into_iter().collect::<Vec<_>>(),
+            vec![
+                SourceId::new("0x003c84fffe164750", "illuminance_above_threshold"),
+                SourceId::new("0x003c84fffe164750", "occupancy"),
+                SourceId::new("0x00158d00075a4e9c", "occupancy")
+            ]
+        );
     }
 }
