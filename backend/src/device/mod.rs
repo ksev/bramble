@@ -1,33 +1,39 @@
 mod device;
 mod feature;
-mod source;
 mod task_spec;
 
 use std::{collections::BTreeSet, sync::Arc};
 
 use anyhow::Result;
-use futures::{StreamExt, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 
 use crate::{
     automation::{Automation, Program},
-    bus::Topic,
+    db,
     task::Task,
+    topic::static_topic,
+    value::{self, ValueId},
 };
 pub use device::*;
 pub use feature::*;
-pub use source::{SourceId, Sources};
 pub use task_spec::*;
 
-#[derive(Default)]
-pub struct DeviceBus {
-    /// Publish on this topic to subscribe to a MQTT topic on the specified server
-    pub add: Topic<Arc<Device>>,
-    pub value: Topic<(SourceId, FeatureValue)>,
+static_topic!(CHANGED, Arc<Device>);
+
+pub fn notify_changed<T>(device: T)
+where
+    T: Into<Arc<Device>>,
+{
+    CHANGED.publish(device.into());
+}
+
+pub fn changed() -> impl Stream<Item = Arc<Device>> {
+    CHANGED.subscribe()
 }
 
 /// Restore all devices tasks on restart
 pub async fn restore(task: Task) -> Result<()> {
-    let mut conn = task.db.acquire().await?;
+    let mut conn = db::connection().await?;
 
     {
         let mut devices = Device::all(&mut conn);
@@ -40,7 +46,7 @@ pub async fn restore(task: Task) -> Result<()> {
         let mut programs = Feature::load_automations(&mut conn);
 
         while let Some((device_id, feature_id, automation)) = programs.try_next().await? {
-            let target = SourceId::new(&device_id, &feature_id);
+            let target = ValueId::new(&device_id, &feature_id);
             spawn_automation_task(&task, target, &automation)?;
         }
     }
@@ -48,19 +54,13 @@ pub async fn restore(task: Task) -> Result<()> {
     Ok(())
 }
 
-pub async fn automation_task(
-    (mut program, deps): (Program, Vec<SourceId>),
-    task: Task,
-) -> Result<()> {
-    let mut vals = task.bus.device.value.subscribe();
-
-    let chan = &task.bus.device.value;
-    let sources = &task.sources;
+pub async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) -> Result<()> {
+    let mut vals = value::subscribe();
     let deps: BTreeSet<_> = deps.into_iter().collect();
 
     while let Some((key, _)) = vals.next().await {
         if deps.contains(&key) {
-            program.execute(chan, sources)?;
+            program.execute()?;
         }
     }
 
@@ -68,36 +68,35 @@ pub async fn automation_task(
 }
 
 pub fn spawn_device_tasks(task: &Task, device: &Device) {
-    for spec in &device.task_spec {
-        match spec {
-            TaskSpec::Zigbee2Mqtt(server) => {
-                let label = format!("zigbee2mqtt:{}:{}", server.host, server.port);
+    match &device.task_spec {
+        TaskSpec::Zigbee2Mqtt(server) => {
+            let label = format!("zigbee2mqtt:{}:{}", server.host, server.port);
 
-                if task.has_task(&label) {
-                    // There is no need to reboot the task just ignore
-                    continue;
-                }
-
-                task.spawn_with_argument(
-                    label,
-                    (device.id.clone(), server.clone()),
-                    crate::integration::zigbee2mqtt::zigbee2mqtt_update,
-                );
+            if task.has_task(&label) {
+                // There is no need to reboot the task just ignore
+                return;
             }
-            TaskSpec::Zigbee2MqttDevice(_) => {
-                let label = format!("{}/Zigbee2MqttDevice", device.id);
 
-                task.spawn_with_argument(
-                    label,
-                    (&device.id).into(),
-                    crate::integration::zigbee2mqtt::zigbee2mqtt_device,
-                )
-            }
+            task.spawn_with_argument(
+                label,
+                (device.id.clone(), server.clone()),
+                crate::integration::zigbee2mqtt::zigbee2mqtt_update,
+            );
         }
+        TaskSpec::Zigbee2MqttDevice(_) => {
+            let label = format!("{}/Zigbee2MqttDevice", device.id);
+
+            task.spawn_with_argument(
+                label,
+                (&device.id).into(),
+                crate::integration::zigbee2mqtt::zigbee2mqtt_device,
+            );
+        }
+        TaskSpec::NoOp => {}
     }
 }
 
-pub fn spawn_automation_task(task: &Task, target: SourceId, automation: &Automation) -> Result<()> {
+pub fn spawn_automation_task(task: &Task, target: ValueId, automation: &Automation) -> Result<()> {
     let package = automation.compile(target)?;
     let label = format!("{:?}/{:?}/automate", target.device, target.feature);
 

@@ -17,7 +17,7 @@ pub struct Device {
     pub parent: Option<String>,
     /// What do we need to create in order for data to flow into sources and out of sinks
     /// This needs to be plain data so we can recreate the tasks on restart
-    pub task_spec: Vec<TaskSpec>,
+    pub task_spec: TaskSpec,
 }
 
 impl Device {
@@ -40,7 +40,7 @@ impl Device {
     ) -> impl Stream<Item = Result<Device, sqlx::Error>> + '_ {
         sqlx::query(include_str!("../../sql/device_all.sql"))
             .try_map(|row: SqliteRow| {
-                let Json(task_spec): Json<Vec<TaskSpec>> = row.try_get("task_spec")?;
+                let Json(task_spec): Json<TaskSpec> = row.try_get("task_spec")?;
                 let Json(device_type): Json<DeviceType> = row.try_get("type")?;
 
                 Ok(Device {
@@ -58,7 +58,7 @@ impl Device {
         let dev = sqlx::query(include_str!("../../sql/device_by_id.sql"))
             .bind(device_id)
             .try_map(|row: SqliteRow| {
-                let Json(task_spec): Json<Vec<TaskSpec>> = row.try_get("task_spec")?;
+                let Json(task_spec): Json<TaskSpec> = row.try_get("task_spec")?;
                 let Json(device_type): Json<DeviceType> = row.try_get("type")?;
 
                 Ok(Device {
@@ -86,7 +86,7 @@ impl Device {
                 vty: VirtualType::Generic,
             },
             parent: None,
-            task_spec: vec![],
+            task_spec: TaskSpec::NoOp,
         };
 
         device.save(conn).await?;

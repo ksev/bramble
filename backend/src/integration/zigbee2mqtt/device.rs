@@ -6,7 +6,7 @@ use tracing::error;
 
 use crate::{
     device::{TaskSpec, ValueDirection, ValueKind},
-    io::mqtt::{MqttServerInfo, MqttSubscribe},
+    io::mqtt::{MqttServerInfo, MqttTopic},
 };
 
 #[derive(Deserialize, Debug)]
@@ -44,7 +44,7 @@ impl Device {
     ) -> Option<(crate::device::Device, Vec<crate::device::Feature>)> {
         let def = self.definition?;
         let topic = format!("zigbee2mqtt/{}", self.friendly_name);
-        let subscribe = MqttSubscribe { server, topic };
+        let subscribe = MqttTopic { server, topic };
 
         // Filter out duplicate properties
         let features = def
@@ -58,7 +58,7 @@ impl Device {
             name: self.friendly_name,
             device_type: crate::device::DeviceType::Hardware,
             parent: Some(parent.into()),
-            task_spec: vec![TaskSpec::Zigbee2MqttDevice(subscribe)],
+            task_spec: TaskSpec::Zigbee2MqttDevice(subscribe),
         };
 
         Some((out, features))

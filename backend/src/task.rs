@@ -7,11 +7,9 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
     FutureExt,
 };
-use sqlx::SqlitePool;
+
 use tokio::{sync::oneshot, task::JoinHandle};
 use tracing::{debug, error};
-
-use crate::{bus::GlobalBus, device::Sources};
 
 type TaskFn<F> = fn(task: Task) -> F;
 type TaskFnArg<A, F> = fn(argument: A, task: Task) -> F;
@@ -20,11 +18,6 @@ type TaskFnArg<A, F> = fn(argument: A, task: Task) -> F;
 pub struct Task {
     running: Arc<dashmap::DashMap<String, oneshot::Sender<()>>>,
     tx: Sender<TaskHandle>,
-
-    // Data all tasks share and cooperate on
-    pub db: Arc<SqlitePool>,
-    pub sources: Arc<Sources>,
-    pub bus: Arc<GlobalBus>,
 }
 
 impl Task {
@@ -87,21 +80,12 @@ impl Task {
     }
 }
 
-pub fn create_group<F>(
-    callback: TaskFn<F>,
-    db: SqlitePool,
-    sources: Sources,
-    bus: GlobalBus,
-) -> Group
+pub fn create_group<F>(callback: TaskFn<F>) -> Group
 where
     F: Future<Output = Result<()>> + Send + 'static,
 {
     let (etx, erx) = oneshot::channel();
     let running = Arc::new(dashmap::DashMap::new());
-
-    let db = Arc::new(db);
-    let sources = Arc::new(sources);
-    let bus = Arc::new(bus);
 
     running.insert("init".into(), etx);
 
@@ -113,7 +97,7 @@ where
         handle: tokio::spawn(async move {
             tokio::select! {
                 _ = erx => Ok(()),
-                result = callback(Task { running, tx, db, sources, bus }) => result
+                result = callback(Task { running, tx }) => result
             }
         }),
     };

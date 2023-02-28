@@ -2,10 +2,17 @@ use std::sync::{Arc, Mutex};
 
 use futures::{stream, Stream};
 use slotmap::{DefaultKey, SlotMap};
-use smallvec::smallvec;
+use smallvec::{smallvec, SmallVec};
 use tokio::sync::Notify;
 
-use super::{Subscriber, Subscription};
+macro_rules! static_topic {
+    ($name:ident, $of:ty) => {
+        static $name: once_cell::sync::Lazy<crate::topic::Topic<$of>> =
+            once_cell::sync::Lazy::new(|| crate::topic::Topic::default());
+    };
+}
+
+pub(crate) use static_topic;
 
 #[derive(Clone)]
 pub struct Topic<T> {
@@ -82,5 +89,44 @@ impl<T> Drop for RemoveKey<T> {
     fn drop(&mut self) {
         let mut subs = self.subs.lock().expect("Lock subscribers failed");
         subs.remove(self.key);
+    }
+}
+
+pub struct Subscriber<T> {
+    pub mutex: Arc<Mutex<SmallVec<[T; 1]>>>,
+}
+
+pub struct Subscription<T> {
+    mutex: Arc<Mutex<SmallVec<[T; 1]>>>,
+    notify: Arc<Notify>,
+
+    _guard: RemoveKey<T>,
+}
+
+impl<T> Subscription<T> {
+    pub fn new(
+        shared: Arc<Mutex<SmallVec<[T; 1]>>>,
+        notify: Arc<Notify>,
+        guard: RemoveKey<T>,
+    ) -> Subscription<T> {
+        Subscription {
+            mutex: shared,
+            notify,
+            _guard: guard,
+        }
+    }
+
+    pub async fn recv(&mut self) -> T {
+        loop {
+            {
+                let mut buffer = self.mutex.lock().expect("Locking subscriber buffer failed");
+
+                if !buffer.is_empty() {
+                    return buffer.remove(0);
+                }
+            }
+
+            self.notify.notified().await;
+        }
     }
 }

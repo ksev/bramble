@@ -7,11 +7,7 @@ use anyhow::{ensure, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use crate::{
-    bus::Topic,
-    device::{FeatureValue, SourceId, Sources},
-    strings::IString,
-};
+use crate::{strings::IString, value::ValueId};
 
 type Slot = (u64, String);
 type Connection = (Slot, Slot);
@@ -24,7 +20,7 @@ pub struct Automation {
 }
 
 impl Automation {
-    pub fn compile(&self, target: SourceId) -> Result<(Program, Vec<SourceId>)> {
+    pub fn compile(&self, target: ValueId) -> Result<(Program, Vec<ValueId>)> {
         let target_count = self
             .nodes
             .iter()
@@ -169,7 +165,7 @@ fn merge_device_nodes<'a>(
     (nodes, connections)
 }
 
-fn find_dependencies<'a>(nodes: &'a [&'a Node], connections: &'a [Connection]) -> Vec<SourceId> {
+fn find_dependencies<'a>(nodes: &'a [&'a Node], connections: &'a [Connection]) -> Vec<ValueId> {
     let mut outgoing: HashMap<u64, BTreeSet<&str>> = HashMap::new();
 
     for ((f, fs), _) in connections {
@@ -185,7 +181,7 @@ fn find_dependencies<'a>(nodes: &'a [&'a Node], connections: &'a [Connection]) -
         .filter_map(|(id, dev)| Some((outgoing.get(&id)?, dev)))
         .flat_map(|(set, dev)| {
             let dev: IString = dev.into();
-            set.iter().map(move |&slot| SourceId::new(dev, slot))
+            set.iter().map(move |&slot| ValueId::new(dev, slot))
         })
         .collect()
 }
@@ -283,13 +279,8 @@ where
     }
 }
 
-pub struct Context<'a> {
-    pub set_value: &'a Topic<(SourceId, FeatureValue)>,
-    pub sources: &'a Sources,
-}
-
 pub trait ProgramNode: Send + std::fmt::Debug {
-    fn run(&mut self, context: &Context, slots: &mut Slots) -> Result<()>;
+    fn run(&mut self, slots: &mut Slots) -> Result<()>;
 }
 
 fn bnode<T>(node: T) -> Box<dyn ProgramNode>
@@ -382,17 +373,11 @@ impl Program {
         Ok(p)
     }
 
-    pub fn execute(
-        &mut self,
-        set_value: &Topic<(SourceId, FeatureValue)>,
-        sources: &Sources,
-    ) -> Result<()> {
+    pub fn execute(&mut self) -> Result<()> {
         // Reset data from the last run
         for v in self.values.iter_mut() {
             *v = Json::Null;
         }
-
-        let ctx = Context { set_value, sources };
 
         for (index, node) in self.nodes.iter_mut().enumerate() {
             let mut slots = Slots {
@@ -405,7 +390,7 @@ impl Program {
                 input_value_index: &self.input_value_index,
             };
 
-            node.run(&ctx, &mut slots)?;
+            node.run(&mut slots)?;
         }
 
         Ok(())
@@ -564,12 +549,14 @@ impl Output<'_> {
 }
 
 mod nodes {
+    use crate::{
+        strings::IString,
+        value::{self, ValueId},
+    };
     use anyhow::Result;
     use serde_json::{json, Value as Json};
 
-    use crate::{device::SourceId, strings::IString};
-
-    use super::{Context, ProgramNode, Slots};
+    use super::{ProgramNode, Slots};
 
     #[derive(Debug)]
     pub struct Device {
@@ -583,10 +570,10 @@ mod nodes {
     }
 
     impl ProgramNode for Device {
-        fn run(&mut self, context: &Context, slots: &mut Slots) -> Result<()> {
+        fn run(&mut self, slots: &mut Slots) -> Result<()> {
             for mut slot in slots.outputs() {
-                let id = SourceId::new(self.id, slot.id());
-                let current = context.sources.get(id);
+                let id = ValueId::new(self.id, slot.id());
+                let current = value::current(id);
 
                 match current.value() {
                     Ok(js) => slot.write(js.clone()),
@@ -600,20 +587,20 @@ mod nodes {
 
     #[derive(Debug)]
     pub struct Target {
-        id: SourceId,
+        id: ValueId,
     }
 
     impl Target {
-        pub fn new(id: SourceId) -> Target {
+        pub fn new(id: ValueId) -> Target {
             Target { id }
         }
     }
 
     impl ProgramNode for Target {
-        fn run(&mut self, _: &Context, slots: &mut Slots) -> Result<()> {
+        fn run(&mut self, slots: &mut Slots) -> Result<()> {
             let v = slots.input(self.id.feature)?.next().unwrap_or(&Json::Null);
 
-            println!("Target {v:?}");
+            value::push(self.id, v.clone());
 
             Ok(())
         }
@@ -623,7 +610,7 @@ mod nodes {
     pub struct Or;
 
     impl ProgramNode for Or {
-        fn run(&mut self, _: &Context, slots: &mut Slots) -> Result<()> {
+        fn run(&mut self, slots: &mut Slots) -> Result<()> {
             let out = slots
                 .input("input")?
                 .into_iter()
@@ -639,7 +626,7 @@ mod nodes {
     pub struct And;
 
     impl ProgramNode for And {
-        fn run(&mut self, _: &Context, slots: &mut Slots) -> Result<()> {
+        fn run(&mut self, slots: &mut Slots) -> Result<()> {
             let out = slots
                 .input("input")?
                 .into_iter()
@@ -655,7 +642,7 @@ mod nodes {
     pub struct Xor;
 
     impl ProgramNode for Xor {
-        fn run(&mut self, _: &Context, slots: &mut Slots) -> Result<()> {
+        fn run(&mut self, slots: &mut Slots) -> Result<()> {
             let ones = slots
                 .input("input")?
                 .into_iter()
@@ -676,7 +663,7 @@ mod nodes {
     pub struct Not;
 
     impl ProgramNode for Not {
-        fn run(&mut self, _: &Context, slots: &mut Slots) -> Result<()> {
+        fn run(&mut self, slots: &mut Slots) -> Result<()> {
             let val = slots.input("input")?.next();
 
             let inverse = match val {
@@ -694,6 +681,8 @@ mod nodes {
 
 #[cfg(test)]
 mod test {
+    use crate::value;
+
     use super::*;
     use serde_json::json;
 
@@ -735,18 +724,14 @@ mod test {
             connections,
         };
 
-        let target = SourceId::new("", "state");
+        let target = ValueId::new("", "state");
         let (mut program, _) = auto.compile(target).unwrap();
 
-        let t = Topic::default();
+        value::set_current(ValueId::new("amk", "state"), Ok(json!(true)));
+        value::set_current(ValueId::new("amk", "state_two"), Ok(json!(false)));
+        value::set_current(ValueId::new("two", "state"), Ok(json!(false)));
 
-        let sources = Sources::new(t.clone());
-
-        sources.set(SourceId::new("amk", "state"), Ok(json!(true)));
-        sources.set(SourceId::new("amk", "state_two"), Ok(json!(false)));
-        sources.set(SourceId::new("two", "state"), Ok(json!(false)));
-
-        program.execute(&t, &sources).unwrap();
+        program.execute().unwrap();
     }
 
     #[test]
@@ -754,7 +739,7 @@ mod test {
         let p = r#"{"counter":6,"nodes":[{"id":0,"position":[6355,6027],"properties":{"tag":"Target"}},{"id":1,"position":[5415,5651],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":2,"position":[5418,5902],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":3,"position":[5433,6145],"properties":{"tag":"Device","content":"0x00158d00075a4e9c"}},{"id":4,"position":[5769,6041],"properties":{"tag":"Or"}},{"id":5,"position":[6055,5905],"properties":{"tag":"And"}}],"connections":[[[3,"occupancy"],[4,"input"]],[[2,"occupancy"],[4,"input"]],[[2,"occupancy"],[5,"input"]],[[4,"result"],[5,"input"]],[[5,"result"],[0,"state"]],[[1,"occupancy"],[5,"input"]]]}"#;
         let auto: Automation = serde_json::de::from_str(&p).unwrap();
 
-        let target = SourceId::new("", "state");
+        let target = ValueId::new("", "state");
         let (program, _) = auto.compile(target).unwrap();
 
         // We have a duplicate device node in the Automation, the compile should merge them
@@ -767,15 +752,15 @@ mod test {
 
         let auto: Automation = serde_json::de::from_str(&p).unwrap();
 
-        let target = SourceId::new("", "state");
+        let target = ValueId::new("", "state");
         let (_, deps) = auto.compile(target).unwrap();
 
         assert_eq!(
             deps.into_iter().collect::<Vec<_>>(),
             vec![
-                SourceId::new("0x003c84fffe164750", "illuminance_above_threshold"),
-                SourceId::new("0x003c84fffe164750", "occupancy"),
-                SourceId::new("0x00158d00075a4e9c", "occupancy")
+                ValueId::new("0x003c84fffe164750", "illuminance_above_threshold"),
+                ValueId::new("0x003c84fffe164750", "occupancy"),
+                ValueId::new("0x00158d00075a4e9c", "occupancy")
             ]
         );
     }

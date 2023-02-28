@@ -4,13 +4,11 @@ use anyhow::Result;
 use async_graphql::Enum;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteConnection};
+use serde_json::Value as Json;
+use sqlx::{sqlite::SqliteRow, types::Json as SqlJson, Row, SqliteConnection};
 use uuid::Uuid;
 
 use crate::automation::Automation;
-
-pub type FeatureValue = Result<serde_json::Value, String>;
 
 #[derive(Debug)]
 pub struct Feature {
@@ -31,8 +29,8 @@ impl Feature {
         sqlx::query(include_str!("../../sql/feature_by_device.sql"))
             .bind(device_id)
             .try_map(|row: SqliteRow| {
-                let meta: Json<BTreeMap<String, serde_json::Value>> = row.try_get("meta")?;
-                let auto: Option<Json<Automation>> = row.try_get("automate")?;
+                let meta: SqlJson<BTreeMap<String, Json>> = row.try_get("meta")?;
+                let auto: Option<SqlJson<Automation>> = row.try_get("automate")?;
 
                 Ok(Feature {
                     id: row.try_get("id")?,
@@ -57,8 +55,8 @@ impl Feature {
         ))
         .bind(device_id)
         .try_map(|row: SqliteRow| {
-            let meta: Json<BTreeMap<String, serde_json::Value>> = row.try_get("meta")?;
-            let auto: Option<Json<Automation>> = row.try_get("automate")?;
+            let meta: SqlJson<BTreeMap<String, Json>> = row.try_get("meta")?;
+            let auto: Option<SqlJson<Automation>> = row.try_get("automate")?;
 
             Ok(Feature {
                 id: row.try_get("id")?,
@@ -81,8 +79,8 @@ impl Feature {
             .bind(device_id)
             .bind(feature_id)
             .try_map(|row: SqliteRow| {
-                let meta: Json<BTreeMap<String, serde_json::Value>> = row.try_get("meta")?;
-                let auto: Option<Json<Automation>> = row.try_get("automate")?;
+                let meta: SqlJson<BTreeMap<String, Json>> = row.try_get("meta")?;
+                let auto: Option<SqlJson<Automation>> = row.try_get("automate")?;
 
                 Ok(Feature {
                     id: row.try_get("id")?,
@@ -104,7 +102,7 @@ impl Feature {
     ) -> impl Stream<Item = Result<(String, String, Automation), sqlx::Error>> + '_ {
         sqlx::query(include_str!("../../sql/feature_automation.sql"))
             .try_map(|row: SqliteRow| {
-                let auto: Json<Automation> = row.try_get("automate")?;
+                let auto: SqlJson<Automation> = row.try_get("automate")?;
                 Ok((row.try_get("device")?, row.try_get("id")?, auto.0))
             })
             .fetch(conn)
@@ -118,8 +116,8 @@ impl Feature {
             .bind(&self.name)
             .bind(self.direction as u8)
             .bind(self.kind as u8)
-            .bind(Json(&self.meta))
-            .bind(self.automate.as_ref().map(Json))
+            .bind(SqlJson(&self.meta))
+            .bind(self.automate.as_ref().map(SqlJson))
             .execute(conn)
             .await?;
 
@@ -131,7 +129,7 @@ impl Feature {
         device_id: &str,
         name: String,
         kind: ValueKind,
-        meta: BTreeMap<String, serde_json::Value>,
+        meta: BTreeMap<String, Json>,
         conn: &mut SqliteConnection,
     ) -> Result<Feature> {
         let id = Uuid::new_v4().to_string();
@@ -151,7 +149,7 @@ impl Feature {
     }
 
     /// Validate a if [`Value`] is Valid for this Feature
-    pub fn validate(&self, value: &Value) -> FeatureValue {
+    pub fn validate(&self, value: &Json) -> Result<Json, String> {
         let possible: Vec<String> = self
             .meta
             .get("possible")
@@ -160,24 +158,24 @@ impl Feature {
             .unwrap_or(vec![]);
 
         match (value, self.kind) {
-            (Value::Null, _) => Ok(Value::Null),
-            (Value::Bool(b), ValueKind::Bool) => Ok(Value::Bool(*b)),
-            (Value::Number(n), ValueKind::Number { .. }) => Ok(Value::Number(n.clone())),
-            (Value::String(s), ValueKind::String) => Ok(Value::String(s.clone())),
+            (Json::Null, _) => Ok(Json::Null),
+            (Json::Bool(b), ValueKind::Bool) => Ok(Json::Bool(*b)),
+            (Json::Number(n), ValueKind::Number { .. }) => Ok(Json::Number(n.clone())),
+            (Json::String(s), ValueKind::String) => Ok(Json::String(s.clone())),
 
-            (Value::String(s), ValueKind::State) => {
+            (Json::String(s), ValueKind::State) => {
                 if s.is_empty() {
                     // Treat empty strings a null, quite a few devices go back to an "empty", state
-                    Ok(Value::Null)
+                    Ok(Json::Null)
                 } else if possible.contains(s) {
-                    Ok(Value::String(s.clone()))
+                    Ok(Json::String(s.clone()))
                 } else {
                     Err(format!("{} is not part of state set {:?}", s, possible))
                 }
             }
 
-            (Value::Array(_), _) => Err("Only descrete json values allowed, got array".into()),
-            (Value::Object(_), _) => Err("Only descrete json values allowed, got array".into()),
+            (Json::Array(_), _) => Err("Only descrete json values allowed, got array".into()),
+            (Json::Object(_), _) => Err("Only descrete json values allowed, got array".into()),
 
             (a, b) => Err(format!(
                 "Got value of {:?} expected value of kind {:?}",

@@ -2,12 +2,16 @@ use std::{collections::HashMap, time::Duration};
 
 use anyhow::Result;
 use bytes::Bytes;
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use rumqttc::{AsyncClient, ConnAck, Event, EventLoop, MqttOptions, Packet};
 use serde_derive::{Deserialize, Serialize};
 use tokio::time::timeout;
+use tracing::warn;
 
-use crate::{bus::Topic, task::Task};
+use crate::{task::Task, topic::static_topic};
+
+static_topic!(CLIENTBUS, ClientAction);
+static_topic!(INCOMING, (String, Bytes));
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct MqttServerInfo {
@@ -52,52 +56,77 @@ impl std::hash::Hash for MqttServerInfo {
 const MAX_PACKET_SIZE: usize = 2 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct MqttSubscribe {
+pub struct MqttTopic {
     pub topic: String,
     pub server: MqttServerInfo,
 }
 
-#[derive(Default)]
-pub struct MqttBus {
-    /// Publish on this topic to subscribe to a MQTT topic on the specified server
-    pub subscribe: Topic<MqttSubscribe>,
-    pub published: Topic<(String, Bytes)>,
+#[derive(Clone)]
+enum ClientAction {
+    S(MqttTopic),
+    P(MqttTopic, Vec<u8>),
+}
+
+pub fn subscribe(topic: MqttTopic) {
+    CLIENTBUS.publish(ClientAction::S(topic));
+}
+
+pub fn publish(topic: MqttTopic, value: Vec<u8>) {
+    CLIENTBUS.publish(ClientAction::P(topic, value));
+}
+
+pub fn incoming() -> impl Stream<Item = (String, Bytes)> {
+    INCOMING.subscribe()
 }
 
 /**
  * A task to manage connection going out to many different MQTT server, we connect and subscribe to the first topic at the same time
  */
-pub async fn manage_connections(t: Task) -> Result<()> {
+pub async fn manage_connections(_: Task) -> Result<()> {
     let mut connections: HashMap<MqttServerInfo, AsyncClient> = HashMap::new();
-    let mut channel = t.bus.mqtt.subscribe.subscribe();
 
-    while let Some(sub) = channel.next().await {
-        let key = sub.server.clone();
+    let mut actions = CLIENTBUS.subscribe();
 
-        if let Some(client) = connections.get_mut(&key) {
-            client
-                .subscribe(&sub.topic, rumqttc::QoS::AtLeastOnce)
-                .await?;
-        } else {
-            let (client, mut eventloop) = connect(&sub.server).await?;
+    while let Some(r) = actions.next().await {
+        use ClientAction::*;
 
-            let bus = t.bus.clone();
+        match r {
+            S(sub) => {
+                let key = sub.server.clone();
 
-            tokio::spawn(async move {
-                while let Ok(notification) = eventloop.poll().await {
-                    if let Event::Incoming(Packet::Publish(p)) = notification {
-                        bus.mqtt.published.publish((p.topic, p.payload));
-                    }
+                if let Some(client) = connections.get_mut(&key) {
+                    client
+                        .subscribe(&sub.topic, rumqttc::QoS::AtLeastOnce)
+                        .await?;
+                } else {
+                    let (client, mut eventloop) = connect(&sub.server).await?;
+
+                    tokio::spawn(async move {
+                        while let Ok(notification) = eventloop.poll().await {
+                            if let Event::Incoming(Packet::Publish(p)) = notification {
+                                INCOMING.publish((p.topic, p.payload));
+                            }
+                        }
+
+                        println!("mqtt background died");
+                    });
+
+                    client
+                        .subscribe(&sub.topic, rumqttc::QoS::AtLeastOnce)
+                        .await?;
+
+                    connections.insert(key, client);
                 }
-
-                println!("mqtt background died");
-            });
-
-            client
-                .subscribe(&sub.topic, rumqttc::QoS::AtLeastOnce)
-                .await?;
-
-            connections.insert(key, client);
+            }
+            P(server, bytes) => {
+                if let Some(client) = connections.get(&server.server) {
+                    client
+                        .publish(&server.topic, rumqttc::QoS::AtLeastOnce, false, bytes)
+                        .await?;
+                } else {
+                    warn!("Tried to push to mqtt server we are not connected to, fix this");
+                }
+            }
         }
     }
 
