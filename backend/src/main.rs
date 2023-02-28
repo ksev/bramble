@@ -1,10 +1,10 @@
 mod api;
-mod automation;
 mod db;
 mod device;
 mod http;
 mod integration;
 mod io;
+mod program;
 mod strings;
 mod task;
 mod topic;
@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 async fn init(task: Task) -> Result<()> {
     task.spawn("http", http);
     task.spawn("mqtt_connections", io::mqtt::manage_connections);
-    task.spawn("device_restore", device::restore);
+    task.spawn("device_restore", device::restore_task);
 
     Ok(())
 }

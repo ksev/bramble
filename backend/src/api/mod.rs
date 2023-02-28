@@ -8,8 +8,12 @@ use futures::{Stream, StreamExt};
 use serde_json::Value as Json;
 
 use crate::{
-    automation::Automation, db, device::spawn_automation_task, integration::zigbee2mqtt,
-    io::mqtt::MqttServerInfo, task::Task, value::ValueId,
+    db,
+    device::{spawn_automation_task, Automation},
+    integration::zigbee2mqtt,
+    io::mqtt::MqttServerInfo,
+    task::Task,
+    value::ValueId,
 };
 
 pub struct Query;
@@ -287,7 +291,7 @@ impl Mutation {
 async fn notify_device_changed(id: &str) -> Result<()> {
     let mut conn = db::connection().await?;
 
-    let device = crate::device::Device::load_by_id(&id, &mut conn).await?;
+    let device = crate::device::Device::load_by_id(id, &mut conn).await?;
     crate::device::notify_changed(device);
 
     Ok(())

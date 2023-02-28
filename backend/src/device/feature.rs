@@ -8,7 +8,7 @@ use serde_json::Value as Json;
 use sqlx::{sqlite::SqliteRow, types::Json as SqlJson, Row, SqliteConnection};
 use uuid::Uuid;
 
-use crate::automation::Automation;
+use super::Automation;
 
 #[derive(Debug)]
 pub struct Feature {

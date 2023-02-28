@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::strings::IString;
 use crate::topic::static_topic;
 
-static STORAGE: Lazy<DashMap<ValueId, Result<Json, String>>> = Lazy::new(|| DashMap::default());
+static STORAGE: Lazy<DashMap<ValueId, Result<Json, String>>> = Lazy::new(DashMap::default);
 
 static_topic!(INCOMING, (ValueId, Result<Json, String>));
 static_topic!(OUTGOING, (ValueId, Json));

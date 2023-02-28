@@ -180,7 +180,7 @@ pub async fn zigbee2mqtt_device(device_id: IString, _: Task) -> Result<()> {
         while let Some((id, mut value)) = outgoing.next().await {
             let fid: &str = id.feature.into();
 
-            let feature = features.iter().find(|f| &f.id == fid);
+            let feature = features.iter().find(|f| f.id == fid);
 
             if let Some(spec) = feature {
                 // Rewrite Zigbee2Mqtt Binary to a boolean before we validate

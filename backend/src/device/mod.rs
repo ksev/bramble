@@ -1,3 +1,4 @@
+mod automation;
 mod device;
 mod feature;
 mod task_spec;
@@ -8,12 +9,13 @@ use anyhow::Result;
 use futures::{Stream, StreamExt, TryStreamExt};
 
 use crate::{
-    automation::{Automation, Program},
     db,
+    program::Program,
     task::Task,
     topic::static_topic,
     value::{self, ValueId},
 };
+pub use automation::Automation;
 pub use device::*;
 pub use feature::*;
 pub use task_spec::*;
@@ -32,7 +34,7 @@ pub fn changed() -> impl Stream<Item = Arc<Device>> {
 }
 
 /// Restore all devices tasks on restart
-pub async fn restore(task: Task) -> Result<()> {
+pub async fn restore_task(task: Task) -> Result<()> {
     let mut conn = db::connection().await?;
 
     {
@@ -48,19 +50,6 @@ pub async fn restore(task: Task) -> Result<()> {
         while let Some((device_id, feature_id, automation)) = programs.try_next().await? {
             let target = ValueId::new(&device_id, &feature_id);
             spawn_automation_task(&task, target, &automation)?;
-        }
-    }
-
-    Ok(())
-}
-
-pub async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) -> Result<()> {
-    let mut vals = value::subscribe();
-    let deps: BTreeSet<_> = deps.into_iter().collect();
-
-    while let Some((key, _)) = vals.next().await {
-        if deps.contains(&key) {
-            program.execute()?;
         }
     }
 
@@ -101,6 +90,19 @@ pub fn spawn_automation_task(task: &Task, target: ValueId, automation: &Automati
     let label = format!("{:?}/{:?}/automate", target.device, target.feature);
 
     task.spawn_with_argument(label, package, automation_task);
+
+    Ok(())
+}
+
+async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) -> Result<()> {
+    let mut vals = value::subscribe();
+    let deps: BTreeSet<_> = deps.into_iter().collect();
+
+    while let Some((key, _)) = vals.next().await {
+        if deps.contains(&key) {
+            program.execute()?;
+        }
+    }
 
     Ok(())
 }

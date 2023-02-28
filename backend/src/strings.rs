@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use symbol_table::{Symbol, SymbolTable};
 
-static STRINGS: Lazy<SymbolTable> = Lazy::new(|| SymbolTable::new());
+static STRINGS: Lazy<SymbolTable> = Lazy::new(SymbolTable::new);
 
 #[derive(Hash, Eq, PartialEq, Clone, Copy, Ord, PartialOrd)]
 pub struct IString(Symbol);
@@ -27,23 +27,23 @@ impl From<&String> for IString {
     }
 }
 
-impl Into<&'static str> for &IString {
-    fn into(self) -> &'static str {
-        let IString(sym) = self;
-        STRINGS.resolve(*sym)
+impl From<IString> for String {
+    fn from(value: IString) -> Self {
+        let IString(sym) = value;
+        STRINGS.resolve(sym).into()
     }
 }
 
-impl Into<&'static str> for IString {
-    fn into(self) -> &'static str {
-        let IString(sym) = self;
+impl From<IString> for &'static str {
+    fn from(value: IString) -> Self {
+        let IString(sym) = value;
         STRINGS.resolve(sym)
     }
 }
 
-impl Into<String> for IString {
-    fn into(self) -> String {
-        let IString(sym) = self;
-        STRINGS.resolve(sym).into()
+impl From<&IString> for &'static str {
+    fn from(value: &IString) -> Self {
+        let IString(sym) = value;
+        STRINGS.resolve(*sym)
     }
 }
