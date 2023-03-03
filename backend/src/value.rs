@@ -1,16 +1,33 @@
+use std::future;
+
+use anyhow::Result;
 use dashmap::{mapref::one::Ref, DashMap};
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use once_cell::sync::Lazy;
 use serde_json::Value as Json;
 use tracing::debug;
 
 use crate::strings::IString;
+use crate::task::Task;
 use crate::topic::static_topic;
 
 static STORAGE: Lazy<DashMap<ValueId, Result<Json, String>>> = Lazy::new(DashMap::default);
 
 static_topic!(INCOMING, (ValueId, Result<Json, String>));
 static_topic!(OUTGOING, (ValueId, Json));
+
+pub async fn catch_virtual_push(_: Task) -> Result<()> {
+    let mut values = push_subscribe().filter(|(id, _)| {
+        let s: &str = id.feature.into();
+        future::ready(s.starts_with("virtual"))
+    });
+
+    while let Some((vid, value)) = values.next().await {
+        set_current(vid, Ok(value));
+    }
+
+    Ok(())
+}
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug, Ord, PartialOrd)]
 pub struct ValueId {

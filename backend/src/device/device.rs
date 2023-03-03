@@ -2,7 +2,6 @@ use anyhow::Result;
 use futures::Stream;
 use serde_derive::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, types::Json, Row, SqliteConnection};
-use uuid::Uuid;
 
 use super::TaskSpec;
 
@@ -77,7 +76,7 @@ impl Device {
 
     /// High level call to create a generic device save to database and notify on the device bus that a device was added
     pub async fn create_generic(name: String, conn: &mut SqliteConnection) -> Result<Device> {
-        let id = Uuid::new_v4().to_string();
+        let id = super::random_id("virtual");
 
         let device = Device {
             id,

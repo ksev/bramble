@@ -33,6 +33,11 @@ pub fn changed() -> impl Stream<Item = Arc<Device>> {
     CHANGED.subscribe()
 }
 
+pub fn random_id(prefix: &str) -> String {
+    let [a, b]: [u64; 2] = rand::random();
+    format!("{prefix}:{a:x}{b:x}")
+}
+
 /// Restore all devices tasks on restart
 pub async fn restore_task(task: Task) -> Result<()> {
     let mut conn = db::connection().await?;

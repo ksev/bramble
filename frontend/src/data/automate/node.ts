@@ -2,6 +2,7 @@ import type { Feature } from "$data/api";
 import colors, { Color, directionColor } from "$data/colors";
 import { ValueKind, type Device } from "$data/api";
 import { SvelteComponentTyped,  type ComponentProps, type ComponentType } from "svelte";
+import { Context } from "./automate";
 
 export interface Node {
     // Monotonic id of node
@@ -26,9 +27,9 @@ export interface Node {
     // Settings component, if the node has one
     settings?: Settings
     // Callback that gets fired when a connection is made 
-    onAddedConnection?: (local: SlotRef, remote: SlotRef) => void
+    onAddedConnection?: (ctx: Context, local: SlotRef, remote: SlotRef) => void
     // Callback that gets fired when a connection is broken
-    onRemovedConnection?: (local: SlotRef, remote: SlotRef) => void
+    onRemovedConnection?: (ctx: Context, local: SlotRef, remote: SlotRef) => void
 }
 
 /**
@@ -79,7 +80,7 @@ export interface Connection {
 export interface IncompleteConnection {
     start: SlotRef,
     startDirection: "input" | "output",
-    kind: ValueKind,
+    kind: ValueKind | "ANY",
     over?: SlotRef
 };
 
@@ -102,46 +103,6 @@ export const automationTarget = (name: string, feature: Feature): NodePrototype 
 })
 
 /*
-export function isNull(ctx: Context, inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
-    return {
-        label: "Is null",
-        icon: "bolt-off",
-        color: colors.bool,
-        onAddedConnection: (local, remote) => {
-            if (local.name === "input") {
-                // Specialize to the new possibilities
-                const outputSlot = ctx.nodes.getSlot(remote);
-
-                ctx.nodes.replace(
-                    local.nodeId, 
-                    isNull(ctx, outputSlot.kind)
-                );
-            }
-        },
-        onRemovedConnection: (local) => {
-            if (local.name === "input") {
-                ctx.nodes.replace(
-                    local.nodeId, 
-                    isNull(ctx)
-                );
-            }
-        },
-        inputs: [{
-            id: "input",
-            label: "Input",
-            kind: inputKind,
-        }],
-        outputs: [{
-            id: "output",
-            label: "Result",
-            kind: ValueKind.Bool
-        }]
-    }
-}
-
-export const BOOL_LOGIC: Record<"and" | "or" | "not" | "xor", NodePrototype> = {
-}
-
 export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
     compare: {
         label: "Compare",
@@ -246,6 +207,44 @@ export const STATE_OPS = {
     })
 }
 */
+
+export function isNull(inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
+    return {
+        label: "Is null",
+        properties: { tag: "IsNull", content: inputKind },
+        icon: "bolt-off",
+        color: colors.bool,
+        onAddedConnection: (ctx, local, remote) => {
+            if (local.name === "input") {
+                // Specialize to the new possibilities
+                const outputSlot = ctx.nodes.getSlot(remote);
+
+                ctx.nodes.replace(
+                    local.nodeId, 
+                    isNull(outputSlot.kind)
+                );
+            }
+        },
+        onRemovedConnection: (ctx, local) => {
+            if (local.name === "input") {
+                ctx.nodes.replace(
+                    local.nodeId, 
+                    isNull()
+                );
+            }
+        },
+        inputs: [{
+            id: "input",
+            label: "Input",
+            kind: inputKind,
+        }],
+        outputs: [{
+            id: "result",
+            label: "Result",
+            kind: ValueKind.Bool
+        }]
+    }
+}
 
 export function deviceNode(device: Device): NodePrototype {
     const outputs: Slot[] = device

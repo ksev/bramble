@@ -34,6 +34,19 @@ impl ProgramNode for Device {
 }
 
 #[derive(Debug)]
+pub struct IsNull;
+
+impl ProgramNode for IsNull {
+    fn run(&mut self, slots: &mut Slots) -> Result<()> {
+        let v = slots.input_one("input")?.unwrap_or(&Json::Null);
+
+        slots.output("result", json!(v.is_null()));
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
 pub struct Target {
     id: ValueId,
 }
@@ -46,7 +59,7 @@ impl Target {
 
 impl ProgramNode for Target {
     fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let v = slots.input(self.id.feature)?.next().unwrap_or(&Json::Null);
+        let v = slots.input_one(self.id.feature)?.unwrap_or(&Json::Null);
 
         value::push(self.id, v.clone());
 
@@ -112,7 +125,7 @@ pub struct Not;
 
 impl ProgramNode for Not {
     fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let val = slots.input("input")?.next();
+        let val = slots.input_one("input")?;
 
         let inverse = match val {
             Some(Json::Bool(true)) => json!(false),
@@ -121,6 +134,63 @@ impl ProgramNode for Not {
         };
 
         slots.output("result", inverse);
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct Latch {
+    high: bool,
+}
+
+impl Latch {
+    pub fn new() -> Latch {
+        Latch { high: false }
+    }
+}
+
+impl ProgramNode for Latch {
+    fn run(&mut self, slots: &mut Slots) -> Result<()> {
+        let input = slots.input_or("input", json!(false));
+        let reset = slots.input_or("reset", json!(false));
+
+        if reset == json!(true) {
+            self.high = false;
+        }
+
+        let is_high = input == json!(true);
+        let out = json!(is_high || self.high);
+
+        slots.output("result", out);
+
+        self.high = is_high;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct Toggle {
+    high: bool,
+}
+
+impl Toggle {
+    pub fn new() -> Toggle {
+        Toggle { high: false }
+    }
+}
+
+impl ProgramNode for Toggle {
+    fn run(&mut self, slots: &mut Slots) -> Result<()> {
+        let input = slots.input_one("input")?.unwrap_or(&Json::Bool(false));
+        let is_true = matches!(input, Json::Bool(true));
+
+        if is_true {
+            self.high = !self.high;
+        }
+
+        slots.output("result", json!(self.high));
 
         Ok(())
     }

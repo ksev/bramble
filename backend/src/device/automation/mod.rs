@@ -20,10 +20,13 @@ fn prop_to_node(target: ValueId, prop: &Properties) -> Box<dyn ProgramNode> {
     match prop {
         Target => Box::new(node::Target::new(target)),
         Device(id) => Box::new(node::Device::new(id.into())),
+        IsNull(_) => Box::new(node::IsNull),
+        Toggle => Box::new(node::Toggle::new()),
         And => Box::new(node::And),
         Or => Box::new(node::Or),
         Not => Box::new(node::Not),
         Xor => Box::new(node::Xor),
+        Latch => Box::new(node::Latch::new()),
     }
 }
 
@@ -203,11 +206,16 @@ pub enum Properties {
     Target,
     Device(String),
 
+    // Universal
+    IsNull(String),
+
     // Logic
     And,
     Or,
     Not,
     Xor,
+    Latch,
+    Toggle,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

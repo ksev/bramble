@@ -1,7 +1,7 @@
 import { devices } from "$data/devices";
 import { get } from "svelte/store";
 import type { Context } from "./automate";
-import { deviceNode } from "./node";
+import { deviceNode, isNull } from "./node";
 import * as logic from "./nodes/logic";
 
 export type Action = 
@@ -74,6 +74,22 @@ const LOGICITEMS: MenuItem[] = [
             type: "load",
             fn: (ctx: Context) => ctx.nodes.add(logic.XOR),
         },
+    },
+    {
+        text: "Latch",
+        icon: "circuit-switch-open",
+        action: {
+            type: "load",
+            fn: (ctx: Context) => ctx.nodes.add(logic.LATCH),
+        }
+    },
+    {
+        text: "Toggle",
+        icon: "circuit-pushbutton",
+        action: {
+            type: "load",
+            fn: (ctx: Context) => ctx.nodes.add(logic.TOGGLE),
+        }
     }
 ];
 
@@ -130,16 +146,14 @@ const STATEITEMS: MenuItem[] = [
 ];
 
 export const ROOT: MenuItem[] = [
-    /*
     {
         text: "Is null",
         icon: "bolt-off",
         action: {
             type: "load",
-            fn: (ctx: Context) => ctx.nodes.add(isNull(ctx)),
+            fn: (ctx: Context) => ctx.nodes.add(isNull()),
         }
     },
-    */
     {
         text: "Devices",
         icon: "cpu",

@@ -24,7 +24,7 @@
     }
 
     $: if (kind === 'STATE') {
-        title = `${meta.possible.join(', ')}`;
+        title = `${meta?.possible.join(', ')}`;
     }
 </script>
 

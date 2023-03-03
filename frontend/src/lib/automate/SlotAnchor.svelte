@@ -1,13 +1,13 @@
 <script lang="ts">
     import colors from "$data/colors";
-    import type { ValueKind } from "$data/device";
     import { Point } from "$data/geometry";
     import { pop } from "$data/iterators";
     import { automateContext } from "$data/automate/automate";
     import { completeConnection, type SlotRef } from '$data/automate/node';
+    import { ValueKind } from "$data/api";
 
     export let id: SlotRef;
-    export let kind: ValueKind;
+    export let kind: ValueKind | "ANY";
     export let direction: "input" | "output";
     export let multiple: boolean = false;
 

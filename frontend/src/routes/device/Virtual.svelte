@@ -7,7 +7,7 @@
 	import SelectInput from "$lib/SelectInput.svelte";
 
 	import { devices } from "$data/devices";
-    import api from "$data/api";
+    import Api from "$data/api";
     import { ValueKind } from "$data/api";
     import WordsInput from "$lib/WordsInput.svelte";
 
@@ -41,7 +41,7 @@
 			let id = deviceId;
 
 			if (id === 'NEW') {
-				const resp = await api.createGenericDevice({ name: deviceName });
+				const resp = await $Api.createGenericDevice({ name: deviceName });
 				id = resp.genericDevice;
 			}
 
@@ -53,7 +53,7 @@
 				meta = { possible };
 			}
 
-			await api.createValueBuffer({
+			await $Api.createValueBuffer({
 				deviceId: id,
 				name,
 				kind: ty,

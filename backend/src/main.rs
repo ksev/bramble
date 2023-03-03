@@ -38,6 +38,7 @@ async fn init(task: Task) -> Result<()> {
     task.spawn("http", http);
     task.spawn("mqtt_connections", io::mqtt::manage_connections);
     task.spawn("device_restore", device::restore_task);
+    task.spawn("catch_virtual", value::catch_virtual_push);
 
     Ok(())
 }

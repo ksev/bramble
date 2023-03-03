@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ContextInit } from "$data/automate/automate";
-    import { automationTarget, deviceNode, SlotRef, type NodePrototype } from "$data/automate/node";
-    import { AND, NOT, OR, XOR } from "$data/automate/nodes/logic";
+    import { automationTarget, deviceNode, SlotRef, type NodePrototype, isNull } from "$data/automate/node";
+    import { AND, NOT, OR, XOR, LATCH, TOGGLE } from "$data/automate/nodes/logic";
     import { devices } from "$data/devices";
     import { Point } from "$data/geometry";
     import Program from "$lib/automate/Program.svelte";
@@ -38,6 +38,9 @@
             "Or": async () => OR,
             "Not": async () => NOT,
             "Xor": async () => XOR,
+            "Toggle": async () => TOGGLE,  
+            "Latch": async () => LATCH,
+            "IsNull": async (kind) => isNull(kind),
             "Device": async (id) => {
                 const target = await devices.byId(id);
                 return deviceNode(target); 

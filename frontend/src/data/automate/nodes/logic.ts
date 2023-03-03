@@ -72,3 +72,44 @@ export const NOT: NodePrototype = {
         kind: ValueKind.Bool,
     }]
 };
+
+export const LATCH: NodePrototype = {
+    label: "Latch",
+    properties: { tag: "Latch" },
+    icon: "circuit-switch-open",
+    color: colors.bool,
+    inputs: [
+        {
+            id: "input",
+            label: "Input",
+            kind: ValueKind.Bool,
+        },
+        {
+            id: "reset",
+            label: "Reset",
+            kind: ValueKind.Bool,
+        }
+    ],
+    outputs: [{
+        id: "result",
+        label: "Result",
+        kind: ValueKind.Bool,
+    }]  
+};
+
+export const TOGGLE: NodePrototype = {
+    label: "Toggle",
+    properties: { tag: "Toggle" },
+    icon: "circuit-pushbutton",
+    color: colors.bool,
+    inputs: [{
+        id: "input",
+        label: "Input",
+        kind: ValueKind.Bool,
+    }],
+    outputs: [{
+        id: "result",
+        label: "Result",
+        kind: ValueKind.Bool
+    }]
+};

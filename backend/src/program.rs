@@ -244,6 +244,24 @@ impl Slots<'_> {
         Ok(iter)
     }
 
+    pub fn input_one<T>(&self, id: T) -> Result<Option<&Json>>
+    where
+        T: Into<IString>,
+    {
+        Ok(self.input(id)?.next())
+    }
+
+    pub fn input_or<T>(&self, id: T, def: Json) -> Json
+    where
+        T: Into<IString>,
+    {
+        let Ok(mut it) = self.input(id) else {
+            return def;
+        };
+
+        it.next().cloned().unwrap_or(def)
+    }
+
     pub fn inputs(&self) -> impl Iterator<Item = IString> + '_ {
         self.inputs[self.index].iter().map(|(id, _)| *id)
     }

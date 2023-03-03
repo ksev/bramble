@@ -21,7 +21,7 @@
         }
 
         let base = get(layouts[0]).origin.y;
-        base = Math.floor((base - 0.1) / 20) * 20;
+        base = Math.floor(base / 20) * 20;
 
         for (const layout of layouts) {
             layout.moveY(base);
@@ -53,7 +53,7 @@
         </div>
 
         <div class="icon-row">
-            <button title="Align top" on:click={alignTop}>
+            <button title="Align top" on:click|stopPropagation={alignTop}>
                 <Icon name="box-align-top" color={colors.fadedtext} size={18} />
             </button>
             <button title="Align bottom">

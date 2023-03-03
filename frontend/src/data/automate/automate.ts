@@ -311,19 +311,19 @@ export function nodeStore(ctx: Context, init: ContextInit) {
             let {from, to} = connection;
 
             const cb1 = backend.get(from.nodeId)?.onAddedConnection;
-            if (cb1) cb1(from, to);
+            if (cb1) cb1(ctx, from, to);
 
             const cb2 = backend.get(to.nodeId)?.onAddedConnection;
-            if (cb2) cb2(to, from);
+            if (cb2) cb2(ctx, to, from);
         },
         onRemovedConnection: (connection: Connection) => {
             let {from, to} = connection;
 
             const cb1 = backend.get(from.nodeId)?.onRemovedConnection;
-            if (cb1) cb1(from, to);
+            if (cb1) cb1(ctx, from, to);
 
             const cb2 = backend.get(to.nodeId)?.onRemovedConnection;
-            if (cb2) cb2(to, from);
+            if (cb2) cb2(ctx, to, from);
         }
     }
 }
@@ -335,7 +335,14 @@ export function nodeStore(ctx: Context, init: ContextInit) {
 export type LayoutStore = ReturnType<typeof layoutStore>;
 
 export function layoutStore(initialData: Rect) {
-    const w = writable(initialData);
+    const aligned = new Rect(
+        new Point(
+            Math.round(initialData.origin.x), 
+            Math.round(initialData.origin.y)
+        ),
+        initialData.size,
+    )
+    const w = writable(aligned);
 
     return {
         moveY: (y: number) => {

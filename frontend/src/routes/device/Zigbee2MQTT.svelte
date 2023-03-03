@@ -7,6 +7,7 @@
     import SubMenu from '$lib/SubMenu.svelte';
     import TextInput from '$lib/TextInput.svelte';
     import api from '$data/api';
+    import { error, success } from '$data/notification';
 
     let host: string;
     let password: string;
@@ -25,9 +26,11 @@
                 port,
                 username,
                 password
-            })
+            });
+
+            success("Added");
         } catch (e) {
-            console.error(e);
+            error(e.toString());
         } 
     }
 </script>

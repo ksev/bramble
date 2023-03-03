@@ -6,7 +6,6 @@ use futures::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use sqlx::{sqlite::SqliteRow, types::Json as SqlJson, Row, SqliteConnection};
-use uuid::Uuid;
 
 use super::Automation;
 
@@ -14,9 +13,10 @@ use super::Automation;
 pub struct Feature {
     pub id: String,
     pub name: String,
+    pub virt: bool,
     pub direction: ValueDirection,
     pub kind: ValueKind,
-    pub meta: BTreeMap<String, serde_json::Value>,
+    pub meta: BTreeMap<String, Json>,
     pub automate: Option<Automation>,
 }
 
@@ -35,6 +35,7 @@ impl Feature {
                 Ok(Feature {
                     id: row.try_get("id")?,
                     name: row.try_get("name")?,
+                    virt: row.try_get("virtual")?,
                     direction: row.try_get("direction")?,
                     kind: row.try_get("kind")?,
                     meta: meta.0,
@@ -61,6 +62,7 @@ impl Feature {
             Ok(Feature {
                 id: row.try_get("id")?,
                 name: row.try_get("name")?,
+                virt: row.try_get("virtual")?,
                 direction: row.try_get("direction")?,
                 kind: row.try_get("kind")?,
                 meta: meta.0,
@@ -85,6 +87,7 @@ impl Feature {
                 Ok(Feature {
                     id: row.try_get("id")?,
                     name: row.try_get("name")?,
+                    virt: row.try_get("virtual")?,
                     direction: row.try_get("direction")?,
                     kind: row.try_get("kind")?,
                     meta: meta.0,
@@ -114,6 +117,7 @@ impl Feature {
             .bind(device_id)
             .bind(&self.id)
             .bind(&self.name)
+            .bind(&self.virt)
             .bind(self.direction as u8)
             .bind(self.kind as u8)
             .bind(SqlJson(&self.meta))
@@ -124,7 +128,7 @@ impl Feature {
         Ok(())
     }
 
-    /// High level API to attach a Virtual feature to a device and notify that the device has changed
+    /// High level API to attach a Virtual feature to a device
     pub async fn attach_virtual(
         device_id: &str,
         name: String,
@@ -132,7 +136,7 @@ impl Feature {
         meta: BTreeMap<String, Json>,
         conn: &mut SqliteConnection,
     ) -> Result<Feature> {
-        let id = Uuid::new_v4().to_string();
+        let id = super::random_id("virtual");
 
         let feature = Feature {
             id,
@@ -140,6 +144,7 @@ impl Feature {
             direction: ValueDirection::SourceSink,
             kind,
             meta,
+            virt: true,
             automate: None,
         };
 

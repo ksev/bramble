@@ -14,6 +14,7 @@ CREATE TABLE "feature" (
 	"device"	TEXT NOT NULL,
 	"id"	TEXT NOT NULL,
 	"name"	TEXT NOT NULL,
+	"virtual" BOOLEAN NOT NULL,
 	"direction"	INTEGER NOT NULL,
 	"kind"	INTEGER NOT NULL,
 	"meta"	TEXT NOT NULL,
