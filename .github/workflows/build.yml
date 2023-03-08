@@ -1,0 +1,29 @@
+name: Build & push images
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ github.token }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Log in to ghcr.io
+      uses: redhat-actions/podman-login@v1
+      with:
+        username: ${{ env.REGISTRY_USER }}
+        password: ${{ env.REGISTRY_PASSWORD }}
+        registry: ${{ env.IMAGE_REGISTRY }}
+        
+    - name: Build the image
+      run: podman build -t bramble:latest .
+    
+    - name: Publish image
+      run: podman push bramble $IMAGE_REGISTRY/bramble:latest
