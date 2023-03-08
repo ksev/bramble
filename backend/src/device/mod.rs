@@ -92,14 +92,22 @@ pub fn spawn_device_tasks(task: &Task, device: &Device) {
 
 pub fn spawn_automation_task(task: &Task, target: ValueId, automation: &Automation) -> Result<()> {
     let package = automation.compile(target)?;
-    let label = format!("{:?}/{:?}/automate", target.device, target.feature);
 
+    let label = format!("{:?}/{:?}/automate", target.device, target.feature);
     task.spawn_with_argument(label, package, automation_task);
 
     Ok(())
 }
 
 async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) -> Result<()> {
+    if program.steps() == 0 {
+        // Program does not do anything, no need for us to run
+        return Ok(());
+    }
+
+    // Execute once on the availiable data
+    program.execute()?;
+
     let mut vals = value::subscribe();
     let deps: BTreeSet<_> = deps.into_iter().collect();
 

@@ -89,6 +89,22 @@ impl Program {
         Ok(p)
     }
 
+    /// Create a "noop" program, a program that does nothing.
+    pub fn noop() -> Program {
+        Program {
+            nodes: vec![],
+            outputs: MVec::new(),
+            inputs: MVec::new(),
+            input_value_index: MVec::new(),
+            values: vec![],
+        }
+    }
+
+    /// The number of steps to evaluate the program
+    pub fn steps(&self) -> usize {
+        self.nodes.len()
+    }
+
     pub fn execute(&mut self) -> Result<()> {
         // Reset data from the last run
         for v in self.values.iter_mut() {

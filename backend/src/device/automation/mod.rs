@@ -4,6 +4,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use anyhow::{ensure, Result};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
 use crate::{
     program::{Program, ProgramNode},
@@ -20,7 +21,9 @@ fn prop_to_node(target: ValueId, prop: &Properties) -> Box<dyn ProgramNode> {
     match prop {
         Target => Box::new(node::Target::new(target)),
         Device(id) => Box::new(node::Device::new(id.into())),
+        Value(v) => Box::new(node::Value(v.clone())),
         IsNull(_) => Box::new(node::IsNull),
+        Equals { .. } => Box::new(node::Equals),
         Toggle => Box::new(node::Toggle::new()),
         And => Box::new(node::And),
         Or => Box::new(node::Or),
@@ -35,6 +38,7 @@ pub struct Automation {
     counter: u64,
     nodes: Vec<Node>,
     connections: Vec<Connection>,
+    defaults: Vec<(Slot, Json)>,
 }
 
 impl Automation {
@@ -47,17 +51,21 @@ impl Automation {
 
         ensure!(target_count == 1, "Programs requires exactly one Target");
 
-        let node: Vec<&Node> = self.nodes.iter().collect();
+        // Convert the default value list to static value nodes
+        let (added_nodes, connections) =
+            default_values(self.counter, &self.connections, &self.defaults);
+
+        let node: Vec<&Node> = self.nodes.iter().chain(&added_nodes).collect();
 
         // Optimisation steps
-        let (node, connections) = filter_unconnected(&node, &self.connections);
+        let (node, connections) = filter_unconnected(&node, &connections);
         let (node, connections) = merge_device_nodes(&node, &connections);
         let connections = unique_connections(&connections);
 
         // We might optimise away the program
         if self.connections.is_empty() {
             // There are no connections, program is useless but valid
-            return Ok((Program::new(vec![], vec![])?, vec![]));
+            return Ok((Program::noop(), vec![]));
         }
 
         let dependencies = find_dependencies(&node, &connections);
@@ -65,7 +73,7 @@ impl Automation {
         // The is a program but it does not react to any data, so again useless
         if dependencies.is_empty() {
             // There are no connections, program is useless but valid
-            return Ok((Program::new(vec![], vec![])?, vec![]));
+            return Ok((Program::noop(), vec![]));
         }
 
         // Program only works on idecies and not the id field
@@ -90,6 +98,41 @@ impl Automation {
 
         Ok((Program::new(steps, connections)?, dependencies))
     }
+}
+
+fn default_values(
+    counter: u64,
+    connections: &[Connection],
+    defaults: &[(Slot, Json)],
+) -> (Vec<Node>, Vec<Connection>) {
+    let mut cons: Vec<Connection> = connections.into();
+    let mut node = vec![];
+
+    let mut incoming: BTreeSet<Slot> = BTreeSet::new();
+
+    for (_, inc) in connections {
+        incoming.insert(inc.clone());
+    }
+
+    for (i, (slot, value)) in defaults.iter().enumerate() {
+        // Dont add default values to connected inputs
+        if incoming.contains(slot) {
+            continue;
+        }
+
+        let id = counter + i as u64;
+
+        // Every default value is just a static value node
+        node.push(Node {
+            id,
+            position: (0, 0),
+            properties: Properties::Value(value.clone()),
+        });
+
+        cons.push(((id, "value".into()), slot.clone()));
+    }
+
+    (node, cons)
 }
 
 fn filter_unconnected<'a>(
@@ -194,7 +237,7 @@ fn find_dependencies<'a>(nodes: &'a [&'a Node], connections: &'a [Connection]) -
         .collect()
 }
 
-fn unique_connections(connections: &[(Slot, Slot)]) -> Vec<(Slot, Slot)> {
+fn unique_connections(connections: &[Connection]) -> Vec<Connection> {
     BTreeSet::from_iter(connections.iter().cloned())
         .into_iter()
         .collect()
@@ -205,9 +248,11 @@ fn unique_connections(connections: &[(Slot, Slot)]) -> Vec<(Slot, Slot)> {
 pub enum Properties {
     Target,
     Device(String),
+    Value(Json),
 
     // Universal
     IsNull(String),
+    Equals { kind: String, meta: Option<Json> },
 
     // Logic
     And,
@@ -268,6 +313,7 @@ mod test {
             counter: 0, // Makes no difference
             nodes,
             connections,
+            defaults: vec![],
         };
 
         let target = ValueId::new("", "state");

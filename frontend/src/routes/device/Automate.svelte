@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ContextInit } from "$data/automate/automate";
-    import { automationTarget, deviceNode, SlotRef, type NodePrototype, isNull } from "$data/automate/node";
+    import { automationTarget, deviceNode, SlotRef, type NodePrototype, isNull, equals } from "$data/automate/node";
     import { AND, NOT, OR, XOR, LATCH, TOGGLE } from "$data/automate/nodes/logic";
     import { devices } from "$data/devices";
     import { Point } from "$data/geometry";
@@ -40,6 +40,7 @@
             "Xor": async () => XOR,
             "Toggle": async () => TOGGLE,  
             "Latch": async () => LATCH,
+            "Equals": async ({kind, meta}) => equals(kind, meta),
             "IsNull": async (kind) => isNull(kind),
             "Device": async (id) => {
                 const target = await devices.byId(id);
@@ -54,15 +55,31 @@
             to: SlotRef.fromTuple(to)
         }));
 
+        let defaults = new Map(feature.automate.defaults.map(([slot, val]) => {
+            const id = SlotRef.fromTuple(slot).toString();
+            return [id, val];
+        }));
+
         for (const node of feature.automate.nodes) {
             const [x, y] = node.position;
             positions.push([node.id, new Point(x, y)]);
 
             if (node.properties.tag in r) {
-                nodes.push({
+                const box = {
                     id: node.id,
                     ...await r[node.properties.tag](node.properties.content)
-                });
+                };
+
+                for (const input of box.inputs) {
+                    const id = new SlotRef(node.id, input.id).toString();
+                    const value = defaults.get(id);
+
+                    if (value !== undefined) {
+                        input.default = value;   
+                    }
+                }
+            
+                nodes.push(box);
             } else {
                 console.warn(node.properties.tag, "This should be a error node");
             }

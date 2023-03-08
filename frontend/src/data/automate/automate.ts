@@ -263,6 +263,35 @@ export function nodeStore(ctx: Context, init: ContextInit) {
             return Array.from(backend.values());
         },
         replace: (id: number, node: NodePrototype) => {
+            const old = backend.get(id);
+
+            // Remove connections that are no longer valid
+            // Because the slot arrangement has changed
+            if (old) {
+                const cb = (a: Slot, b: Slot) => a.id === b.id;
+                const inputDiff = diff(old.inputs, node.inputs, cb).removed;
+                const outputDiff = diff(old.outputs, node.outputs, cb).removed;
+
+                
+                for (const input of inputDiff) {
+                    const ref = new SlotRef(old.id, input.id);   
+                    const conns = Array.from(ctx.connections.get(ref));
+
+                    for (const conn of conns) {
+                        ctx.connections.remove(conn);
+                    }
+                }
+
+                for (const output of outputDiff) {
+                    const ref = new SlotRef(old.id, output.id);            
+                    const conns = Array.from(ctx.connections.get(ref));
+
+                    for (const conn of conns) {
+                        ctx.connections.remove(conn);
+                    }
+                }
+            }
+            
             backend.set(id, {
                 ...node,
                 id: id
@@ -326,6 +355,34 @@ export function nodeStore(ctx: Context, init: ContextInit) {
             if (cb2) cb2(ctx, to, from);
         }
     }
+}
+
+interface Diff<T> {
+    added: T[],
+    removed: T[],
+}
+
+function diff<T>(before: T[], after: T[], same: (a: T, b: T) => boolean): Diff<T> {
+    const added = [];
+    const removed = [];
+    
+    for (const old of before) {
+        const found = after.find((v) => same(old, v));
+
+        if (found === undefined) {
+            removed.push(old);
+        }
+    }
+
+    for (const ne of after) {
+        const found = before.find((v) => same(ne, v));
+
+        if (found === undefined) {
+            added.push(ne);
+        }
+    }
+
+    return { added, removed };
 }
 
 /**
@@ -511,6 +568,10 @@ function connectionStore(ctx: Context, init: ContextInit) {
                        pop(map(incoming.get(sref)?.keys(), SlotRef.fromString));
             });
         },
+        hasConnection: (ref: SlotRef): boolean => {
+            const sref = ref.toString();
+            return outgoing.has(sref) || incoming.has(sref);  
+        }, 
         connected: (slot1: SlotRef, slot2: SlotRef): boolean => {
             const sslot1 = slot1.toString();
             const sslot2 = slot2.toString();

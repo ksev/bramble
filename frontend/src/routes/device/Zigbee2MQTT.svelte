@@ -28,7 +28,7 @@
                 password
             });
 
-            success("Added");
+            success("CONNECTED");
         } catch (e) {
             error(e.toString());
         } 

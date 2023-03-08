@@ -23,8 +23,12 @@
         meta = slot.meta;
     }
 
-    $: if (kind === 'STATE') {
+    $: if (kind === ValueKind.State) {
         title = `${meta?.possible.join(', ')}`;
+    } else if (
+        kind === ValueKind.Number && 
+        (meta.max !== undefined || meta.min !== undefined)) {
+        title = `${meta.min}...${meta.max}`; 
     }
 </script>
 

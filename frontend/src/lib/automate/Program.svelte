@@ -12,6 +12,7 @@
     import { map } from "$data/iterators";
     import Api from "$data/api";
     import { error, success } from "$data/notification";
+    import { SlotRef } from "$data/automate/node";
 
     export let initialState: ContextInit;
 
@@ -82,10 +83,18 @@
             ];
         }));
 
+        // Extract all default values
+        const d = nodes.all().flatMap(n => 
+            n.inputs.map(s => [s.id, s.default])
+                    .filter(([name, v]: [string, string | number | boolean]) => !!v)
+                    .map(([name, v]) => [[n.id, name], v])
+        );
+
         const program = {
             counter: nodes.counter(),
             nodes: n,
             connections: c,    
+            defaults: d,
         };
 
         try {

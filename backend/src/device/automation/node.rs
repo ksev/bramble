@@ -3,8 +3,10 @@ use crate::{
     strings::IString,
     value::{self, ValueId},
 };
+
 use anyhow::Result;
 use serde_json::{json, Value as Json};
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct Device {
@@ -62,6 +64,8 @@ impl ProgramNode for Target {
         let v = slots.input_one(self.id.feature)?.unwrap_or(&Json::Null);
 
         value::push(self.id, v.clone());
+
+        debug!("{:?} target with {:?}", self.id, v);
 
         Ok(())
     }
@@ -191,6 +195,31 @@ impl ProgramNode for Toggle {
         }
 
         slots.output("result", json!(self.high));
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct Equals;
+
+impl ProgramNode for Equals {
+    fn run(&mut self, slots: &mut Slots) -> Result<()> {
+        let input = slots.input_or("input", Json::Null);
+        let other = slots.input_or("other", Json::Null);
+
+        slots.output("result", json!(input == other));
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct Value(pub Json);
+
+impl ProgramNode for Value {
+    fn run(&mut self, slots: &mut Slots) -> Result<()> {
+        slots.output("value", self.0.clone());
 
         Ok(())
     }

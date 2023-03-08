@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools;
 use serde_derive::Deserialize;
+use serde_json::{json, Value as Json};
 use tracing::error;
 
 use crate::{
@@ -116,6 +117,8 @@ impl Definition {
                     property,
                     unit,
                     access,
+                    value_min,
+                    value_max,
                     ..
                 } => {
                     let direction = match access.try_into() {
@@ -126,20 +129,26 @@ impl Definition {
                         }
                     };
 
+                    let mut meta = BTreeMap::new();
+
+                    if let Some(unit) = unit {
+                        meta.insert("unit".into(), json!(unit.clone()));
+                    }
+
+                    if let Some(min) = value_min {
+                        meta.insert("min".into(), json!(min));
+                    }
+
+                    if let Some(max) = value_max {
+                        meta.insert("max".into(), json!(max));
+                    }
+
                     out.push(crate::device::Feature {
                         name: clean_up_name(name),
                         id: property.clone(),
                         direction,
                         kind: ValueKind::Number,
-                        meta: unit
-                            .iter()
-                            .map(|v| {
-                                (
-                                    "unit".to_string(),
-                                    Into::<serde_json::Value>::into(v.clone()),
-                                )
-                            })
-                            .collect(),
+                        meta,
                         automate: None,
                         virt: false,
                     })
@@ -164,10 +173,7 @@ impl Definition {
                         id: property.clone(),
                         direction,
                         kind: ValueKind::State,
-                        meta: BTreeMap::from([(
-                            "possible".into(),
-                            serde_json::Value::from(values.clone()),
-                        )]),
+                        meta: BTreeMap::from([("possible".into(), Json::from(values.clone()))]),
                         automate: None,
                         virt: false,
                     })

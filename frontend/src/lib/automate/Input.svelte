@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { ValueKind } from "$data/api";
     import { automateContext } from "$data/automate/automate";
     import { type Slot, SlotRef } from "$data/automate/node";
     import SlotAnchor from "./SlotAnchor.svelte";
@@ -23,10 +24,19 @@
 <div class="input" class:multiple={slot.multiple}>
     <SlotAnchor id={id} multiple={slot.multiple} kind={slot.kind} direction={"input"} />
 
-    {#if showDefault}
+    {#if showDefault && slot.kind === ValueKind.State}
         <div class="default">
             <label for="default"><SlotLabel slot={slot} />:</label>
-            <input id="default" value={slot.default} size="10" />
+            <select id="default" bind:value={slot.default}>
+                {#each slot.meta?.possible ?? [] as n}
+                    <option id={n}>{n}</option>
+                {/each}
+            </select>
+        </div>
+    {:else if showDefault}    
+        <div class="default">
+            <label for="default"><SlotLabel slot={slot} />:</label>
+            <input id="default" bind:value={slot.default} size="10" />
         </div>
     {:else}
         <div class="label"><SlotLabel slot={slot} adaptKind={$connectedTo} /></div>
@@ -84,6 +94,10 @@
         display: flex;
         padding: 2px 0;
         color: rgba(255,255,255,0.5);
+    }
+
+    select {
+        text-align: right;
     }
 
 </style>

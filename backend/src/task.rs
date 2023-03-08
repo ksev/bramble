@@ -35,10 +35,16 @@ impl Task {
         }
 
         let task = self.clone();
+        let clean_up = label.clone();
+        let running = task.running.clone();
+
         let handle = tokio::spawn(async move {
             tokio::select! {
                 _ = rx => Ok(()),
-                result = callback(task) => result
+                result = callback(task) => {
+                    running.remove(&clean_up);
+                    result
+                }
             }
         });
 
@@ -63,10 +69,16 @@ impl Task {
         }
 
         let task = self.clone();
+        let clean_up = label.clone();
+        let running = task.running.clone();
+
         let handle = tokio::spawn(async move {
             tokio::select! {
                 _ = rx => Ok(()),
-                result = callback(argument, task) => result
+                result = callback(argument, task) => {
+                    running.remove(&clean_up);
+                    result
+                }
             }
         });
 
@@ -97,7 +109,10 @@ where
         handle: tokio::spawn(async move {
             tokio::select! {
                 _ = erx => Ok(()),
-                result = callback(Task { running, tx }) => result
+                result = callback(Task { running: running.clone(), tx }) => {
+                    running.remove("init");
+                    result
+                }
             }
         }),
     };

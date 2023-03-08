@@ -1,7 +1,7 @@
 import { devices } from "$data/devices";
 import { get } from "svelte/store";
 import type { Context } from "./automate";
-import { deviceNode, isNull } from "./node";
+import { deviceNode, equals, isNull } from "./node";
 import * as logic from "./nodes/logic";
 
 export type Action = 
@@ -93,7 +93,7 @@ const LOGICITEMS: MenuItem[] = [
     }
 ];
 
-const NUMBERSITEMS: MenuItem[] = [
+const MATHITEMS: MenuItem[] = [
     BACK_ITEM,
     /*
     {
@@ -131,20 +131,6 @@ const NUMBERSITEMS: MenuItem[] = [
     */
 ];
 
-const STATEITEMS: MenuItem[] = [
-    BACK_ITEM,
-    /*
-    {
-        text: "Compare",
-        icon: "equal",
-        action: {
-            type: "load",
-            fn: (ctx: Context) => ctx.nodes.add(STATE_OPS.compare(ctx, [])),
-        }
-    }
-    */
-];
-
 export const ROOT: MenuItem[] = [
     {
         text: "Is null",
@@ -152,6 +138,14 @@ export const ROOT: MenuItem[] = [
         action: {
             type: "load",
             fn: (ctx: Context) => ctx.nodes.add(isNull()),
+        }
+    },
+    {
+        text: "Equals",
+        icon: "equal",
+        action: {
+            type: "load",
+            fn: (ctx: Context) => ctx.nodes.add(equals()),
         }
     },
     {
@@ -173,21 +167,12 @@ export const ROOT: MenuItem[] = [
         },
     },
     {
-        text: "State",
-        icon: "a-b",
+        text: "Math",
+        icon: "math-symbols",
         category: true,
         action: {
             type: "next",
-            fn: () => STATEITEMS,
-        }
-    },
-    {
-        text: "Numbers",
-        icon: "123",
-        category: true,
-        action: {
-            type: "next",
-            fn: () => NUMBERSITEMS,
+            fn: () => MATHITEMS,
         },
     },
 ];

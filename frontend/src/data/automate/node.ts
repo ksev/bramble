@@ -1,5 +1,5 @@
 import type { Feature } from "$data/api";
-import colors, { Color, directionColor } from "$data/colors";
+import colors, { Color, directionColor, kindColor } from "$data/colors";
 import { ValueKind, type Device } from "$data/api";
 import { SvelteComponentTyped,  type ComponentProps, type ComponentType } from "svelte";
 import { Context } from "./automate";
@@ -161,51 +161,6 @@ export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
         }]
     },
 }
-
-export const STATE_OPS = {
-    compare: (ctx: Context, possible: string[]): NodePrototype => ({
-        label: "Compare",
-        icon: "equal",
-        color: colors.state,
-        settings: Settings.fromComponent(StateCompare, { possible }),
-        onAddedConnection: (local, remote) => {
-            if (local.name === "input") {
-                // Specialize to the new possibilities
-                const outputSlot = ctx.nodes.getSlot(remote);
-
-                if (outputSlot?.kind === "STATE") {
-                    ctx.nodes.replace(
-                        local.nodeId, 
-                        STATE_OPS.compare(ctx, [])
-                    );
-                }
-            }
-        },
-        onRemovedConnection: (local) => {
-            if (local.name === "input") {
-                ctx.nodes.replace(
-                    local.nodeId, 
-                    STATE_OPS.compare(ctx, [])
-                );
-            }
-        },
-        inputs: [
-            {
-                id: "input",
-                label: "Input",
-                kind: ValueKind.State,
-                meta: {
-                    possible,
-                }
-            },
-        ],
-        outputs: [{
-            id: "result",
-            label: "Result",
-            kind: ValueKind.Bool,
-        }]
-    })
-}
 */
 
 export function isNull(inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
@@ -243,6 +198,71 @@ export function isNull(inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
             label: "Result",
             kind: ValueKind.Bool
         }]
+    }
+}
+
+export function equals(inputKind: ValueKind | "ANY" = "ANY", meta?: Record<string, any>): NodePrototype {
+    const inputs: Slot[] = [{
+        id: "input",
+        label: "Input",
+        kind: inputKind,
+    }];
+
+    if (inputKind != "ANY") {
+        let def: boolean | string | number;
+
+        switch (inputKind) {
+            case ValueKind.Bool:
+                def = true;
+                break;
+            case ValueKind.Number:
+                def = 10;
+                break;
+            case ValueKind.State:
+            case ValueKind.String:
+                def = "";
+                break;
+        }
+
+        inputs.push({
+            id: "other",
+            label: "Other",
+            kind: inputKind,
+            default: def,
+            meta,
+        });
+    }
+    
+    return {
+        label: "Equals",
+        properties: { tag: "Equals", content: { kind: inputKind, meta } },
+        icon: "equal",
+        color: kindColor(inputKind),
+        inputs,
+        outputs: [{
+            id: "result",
+            label: "Result",
+            kind: ValueKind.Bool,
+        }],
+        onAddedConnection: (ctx, local, remote) => {
+            if (local.name === "input") {
+                // Specialize to the new possibilities
+                const outputSlot = ctx.nodes.getSlot(remote);
+
+                ctx.nodes.replace(
+                    local.nodeId, 
+                    equals(outputSlot.kind, outputSlot.meta)
+                );
+            }
+        },
+        onRemovedConnection: (ctx, local) => {
+            if (local.name === "input") {
+                ctx.nodes.replace(
+                    local.nodeId, 
+                    equals()
+                );
+            }
+        },
     }
 }
 
