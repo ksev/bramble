@@ -134,7 +134,7 @@ pub async fn manage_connections(_: Task) -> Result<()> {
 }
 
 async fn connect(server_info: &MqttServerInfo) -> Result<(AsyncClient, EventLoop)> {
-    let client_id = &format!("rome-{}", env!("CARGO_PKG_VERSION"));
+    let client_id = &format!("bramble-{}", env!("CARGO_PKG_VERSION"));
 
     let mut mqttoptions = MqttOptions::new(client_id, &server_info.host, server_info.port);
     mqttoptions.set_keep_alive(Duration::from_secs(30));

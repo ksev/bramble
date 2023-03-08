@@ -21,7 +21,7 @@
   $: notif =
     typeof $apiConnection === "number" && $apiConnection > 500
       ? {
-          message: "Cannot connect to Rome service",
+          message: "Cannot connect to Bramble service",
           type: "error",
         }
       : $current;
@@ -35,10 +35,10 @@
   {/if}
   <menubar style="display: none">
     <div>
-      <img width="48" src={logo} alt="Rome" />
+      <img width="48" src={logo} alt="Bramble" />
     </div>
 
-    <div class="name">Rome</div>
+    <div class="name">Bramble</div>
 
     <div class="main-menu">
       <MainMenu>
