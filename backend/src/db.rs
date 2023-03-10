@@ -12,7 +12,9 @@ use sqlx::{
 static POOL: OnceCell<SqlitePool> = OnceCell::const_new();
 
 async fn open_pool() -> Result<SqlitePool> {
-    let options = SqliteConnectOptions::from_str("sqlite:database.sqlite3")?
+    let path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| "sqlite:database.sqlite3".into());
+
+    let options = SqliteConnectOptions::from_str(&path)?
         .create_if_missing(true)
         .auto_vacuum(SqliteAutoVacuum::Full);
 

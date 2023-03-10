@@ -46,7 +46,8 @@ async fn init(task: Task) -> Result<()> {
 }
 
 async fn http(t: Task) -> Result<()> {
-    let addr = std::net::SocketAddr::from_str("0.0.0.0:8080")?;
+    let addr = std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.0:8080".into());
+    let addr = std::net::SocketAddr::from_str(&addr)?;
     http::listen(t, addr).await?;
 
     Ok(())
