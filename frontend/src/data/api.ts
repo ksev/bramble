@@ -133,7 +133,19 @@ function formatErrors(errors: NextError[]) {
     return out.join('\n');
 }
 
-export const apiConnection = resocket("ws://127.0.0.1:8080/api/ws", ['graphql-transport-ws']);
+function apiHost() {
+    if (import.meta.env.DEV) {
+        return "ws://127.0.0.1:8080/api/ws";
+    }
+
+    const url = new URL("/api/ws", window.location.href);
+
+    url.protocol = url.protocol === "http" ? "ws:" : "wss:";
+
+    return url.href;
+}
+
+export const apiConnection = resocket(apiHost(), ['graphql-transport-ws']);
 
 export type ApiClient = ReturnType<typeof getSdk>;
 
