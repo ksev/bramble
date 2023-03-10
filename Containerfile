@@ -27,4 +27,4 @@ ENV RUST_LOG="backend=warn,tokio=error,runtime=error"
 ENV BIND_ADDRESS="0.0.0.0:8080"
 ENV DATABASE_PATH="sqlite:/root/data/database.sqlite3"
 
-CMD ["backend"]
+CMD ["./backend"]
