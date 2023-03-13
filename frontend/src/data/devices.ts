@@ -44,10 +44,30 @@ class Devices {
         return derived(this.deviceList, identity);
     }
 
-    byId = (id: string): Promise<Device> => {
-        return this.initialized.then(_ => {
-            return this.deviceMap.get(id)
-        })
+    byId = async (id: string): Promise<Device> => {
+        await this.initialized;
+        return this.deviceMap.get(id)
+    }
+
+    iter = () => {
+        return this.deviceMap.values();
+    }
+
+    *children(id: string) {
+        for (const d of this.iter()) {
+            if (d.parent === id) {
+                yield d;
+            }
+        }
+    }
+
+    *byIntegration(name: string) {
+        for (const d of this.iter()) {
+            if (d.deviceType.name === name) {
+                yield d
+            }
+        }
+        
     }
 
     private async fullSync(client: ApiClient) {
@@ -86,11 +106,4 @@ class Devices {
 }
 
 export const devices = new Devices();
-
-/*
-devices.all() -> Readable<Device[]>
-devices.byType(DeviceType.Hardware, DeviceType.Virtual) -> Readable<Device[]>
-devices.byId('xc0') -> Promise<Device>
-devices.hasParent('xc0') -> Readable<Device[]>
-*/
 

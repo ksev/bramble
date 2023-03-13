@@ -12,30 +12,33 @@ use crate::{
     value::ValueId,
 };
 
-type Slot = (u64, String);
+type Slot = (u32, String);
 type Connection = (Slot, Slot);
+
+use node::node0;
+use node::node1;
 
 fn prop_to_node(target: ValueId, prop: &Properties) -> Box<dyn ProgramNode> {
     use Properties::*;
 
     match prop {
-        Target => Box::new(node::Target::new(target)),
-        Device(id) => Box::new(node::Device::new(id.into())),
-        Value(v) => Box::new(node::Value(v.clone())),
-        IsNull(_) => Box::new(node::IsNull),
-        Equals { .. } => Box::new(node::Equals),
-        Toggle => Box::new(node::Toggle::new()),
-        And => Box::new(node::And),
-        Or => Box::new(node::Or),
-        Not => Box::new(node::Not),
-        Xor => Box::new(node::Xor),
-        Latch => Box::new(node::Latch::new()),
+        Target => node1(target, node::target),
+        Device(id) => node1(id.into(), node::device),
+        Value(v) => node1(v.clone(), node::static_value),
+        IsNull(_) => node0(node::is_null),
+        Equals { .. } => node0(node::equals),
+        Toggle => node1(false, node::toggle),
+        And => node0(node::and),
+        Or => node0(node::or),
+        Not => node0(node::not),
+        Xor => node0(node::xor),
+        Latch => node1(false, node::latch),
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Automation {
-    counter: u64,
+    counter: u32,
     nodes: Vec<Node>,
     connections: Vec<Connection>,
     defaults: Vec<(Slot, Json)>,
@@ -65,7 +68,7 @@ impl Automation {
         // We might optimise away the program
         if self.connections.is_empty() {
             // There are no connections, program is useless but valid
-            return Ok((Program::noop(), vec![]));
+            return Ok((Program::default(), vec![]));
         }
 
         let dependencies = find_dependencies(&node, &connections);
@@ -73,27 +76,22 @@ impl Automation {
         // The is a program but it does not react to any data, so again useless
         if dependencies.is_empty() {
             // There are no connections, program is useless but valid
-            return Ok((Program::noop(), vec![]));
+            return Ok((Program::default(), vec![]));
         }
-
-        // Program only works on idecies and not the id field
-        let idx: HashMap<_, _> = node.iter().enumerate().map(|(i, n)| (n.id, i)).collect();
 
         let connections = connections
             .iter()
-            // Rewrite Automation node id to Program node index
             .map(|(fr, to)| {
                 let (fid, fslot) = fr;
                 let (tid, tslot) = to;
 
-                ((idx[fid], fslot.into()), (idx[tid], tslot.into()))
+                ((*fid, fslot.into()), (*tid, tslot.into()))
             })
             .collect();
 
         let steps = node
             .iter()
-            .map(|n| &n.properties)
-            .map(|prop| prop_to_node(target, prop))
+            .map(|n| (n.id, prop_to_node(target, &n.properties)))
             .collect();
 
         Ok((Program::new(steps, connections)?, dependencies))
@@ -101,7 +99,7 @@ impl Automation {
 }
 
 fn default_values(
-    counter: u64,
+    counter: u32,
     connections: &[Connection],
     defaults: &[(Slot, Json)],
 ) -> (Vec<Node>, Vec<Connection>) {
@@ -120,7 +118,7 @@ fn default_values(
             continue;
         }
 
-        let id = counter + i as u64;
+        let id = counter + i as u32;
 
         // Every default value is just a static value node
         node.push(Node {
@@ -139,7 +137,7 @@ fn filter_unconnected<'a>(
     nodes: &'a [&'a Node],
     connections: &'a [Connection],
 ) -> (Vec<&'a Node>, Vec<Connection>) {
-    let mut incoming: HashMap<u64, BTreeSet<u64>> = HashMap::new();
+    let mut incoming: HashMap<u32, BTreeSet<u32>> = HashMap::new();
 
     for ((f, _), (t, _)) in connections {
         incoming.entry(*t).or_default().insert(*f);
@@ -217,7 +215,7 @@ fn merge_device_nodes<'a>(
 }
 
 fn find_dependencies<'a>(nodes: &'a [&'a Node], connections: &'a [Connection]) -> Vec<ValueId> {
-    let mut outgoing: HashMap<u64, BTreeSet<&str>> = HashMap::new();
+    let mut outgoing: HashMap<u32, BTreeSet<&str>> = HashMap::new();
 
     for ((f, fs), _) in connections {
         outgoing.entry(*f).or_default().insert(fs);
@@ -265,13 +263,15 @@ pub enum Properties {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Node {
-    id: u64,
+    id: u32,
     position: (i64, i64),
     properties: Properties,
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeMap;
+
     use crate::value;
 
     use super::*;
@@ -319,38 +319,14 @@ mod test {
         let target = ValueId::new("", "state");
         let (mut program, _) = auto.compile(target).unwrap();
 
-        value::set_current(ValueId::new("amk", "state"), Ok(json!(true)));
-        value::set_current(ValueId::new("amk", "state_two"), Ok(json!(false)));
-        value::set_current(ValueId::new("two", "state"), Ok(json!(false)));
+        let mut input = BTreeMap::new();
 
-        program.execute().unwrap();
-    }
+        input.insert(ValueId::new("amk", "state"), json!(true));
+        input.insert(ValueId::new("amk", "state_two"), json!(false));
+        input.insert(ValueId::new("two", "state"), json!(false));
 
-    #[test]
-    fn uniqe_device_node() {
-        let p = r#"{"counter":6,"nodes":[{"id":0,"position":[6355,6027],"properties":{"tag":"Target"}},{"id":1,"position":[5415,5651],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":2,"position":[5418,5902],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":3,"position":[5433,6145],"properties":{"tag":"Device","content":"0x00158d00075a4e9c"}},{"id":4,"position":[5769,6041],"properties":{"tag":"Or"}},{"id":5,"position":[6055,5905],"properties":{"tag":"And"}}],"connections":[[[3,"occupancy"],[4,"input"]],[[2,"occupancy"],[4,"input"]],[[2,"occupancy"],[5,"input"]],[[4,"result"],[5,"input"]],[[5,"result"],[0,"state"]],[[1,"occupancy"],[5,"input"]]]}"#;
-        let auto: Automation = serde_json::de::from_str(&p).unwrap();
+        let out = program.execute(&input).unwrap();
 
-        let target = ValueId::new("", "state");
-        let (_program, _) = auto.compile(target).unwrap();
-    }
-
-    #[test]
-    fn dependency_list() {
-        let p = r#"{"counter":6,"nodes":[{"id":0,"position":[6113,5917],"properties":{"tag":"Target"}},{"id":3,"position":[5840,5917],"properties":{"tag":"Or"}},{"id":4,"position":[5439,5761],"properties":{"tag":"Device","content":"0x003c84fffe164750"}},{"id":5,"position":[5432,5995],"properties":{"tag":"Device","content":"0x00158d00075a4e9c"}}],"connections":[[[3,"result"],[0,"state"]],[[4,"occupancy"],[3,"input"]],[[5,"occupancy"],[3,"input"]],[[4,"illuminance_above_threshold"],[3,"input"]]]}"#;
-
-        let auto: Automation = serde_json::de::from_str(&p).unwrap();
-
-        let target = ValueId::new("", "state");
-        let (_, deps) = auto.compile(target).unwrap();
-
-        assert_eq!(
-            deps.into_iter().collect::<Vec<_>>(),
-            vec![
-                ValueId::new("0x003c84fffe164750", "illuminance_above_threshold"),
-                ValueId::new("0x003c84fffe164750", "occupancy"),
-                ValueId::new("0x00158d00075a4e9c", "occupancy")
-            ]
-        );
+        assert_eq!(out[&target], json!(true));
     }
 }

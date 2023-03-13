@@ -1,4 +1,5 @@
 <script lang="ts">    
+    import { devices } from '$data/devices';
     import Zigbee2Mqtt from '../../assets/zigbee2mqtt.svg';
     import Mqtt from '../../assets/mqtt.svg';
 
@@ -7,6 +8,9 @@
     import SubMenu from '$lib/SubMenu.svelte';
 
     import Colors from '$data/colors';
+    import { flatMap } from '$data/iterators';
+    import { ValueDirection } from '$data/api';
+    import IntegrationSummary from '$lib/IntegrationSummary.svelte';
 
     const virtualGradient = `linear-gradient(180deg, ${Colors.feature} 50%, ${Colors.automation} 90%)`;
 </script>
@@ -35,23 +39,6 @@
                     <a class="integration" href="#/device/add/mqtt">
                         <span>MQTT</span>
                         <!--
-                        <div class="integration-summary">
-                            <div class="stat">
-                                <Icon name="microchip" size={16} color={Colors.device} />
-                                <strong>1</strong> 
-                                Devices
-                            </div>
-                            <div class="stat">
-                                <Icon name="activity" size={16} color={Colors.source} />
-                                <strong>5</strong> 
-                                Sources
-                            </div>
-                            <div class="stat">
-                                <Icon name="archive" size={16} color={Colors.sink} />
-                                <strong>2</strong> 
-                                Sinks
-                            </div>
-                        </div>
                         -->
                         <img src={Mqtt} alt="Zigbee2MQTT" />
                     </a>
@@ -79,6 +66,7 @@
                     <a class="integration" href="#/device/add/zigbee2mqtt">
                         <span>Zigbee2MQTT</span>
                         <img src={Zigbee2Mqtt} alt="Zigbee2MQTT" />
+                        <IntegrationSummary name="zigbee2mqtt" />
                     </a>
                 </SubMenu>
             </div>
@@ -101,23 +89,6 @@
         width: 75px;
         height: 75px;
     }
-
-    /*
-
-    .integration-summary {
-        display: flex;
-        flex-direction: column; 
-        gap: 2px;
-        flex-grow: 1;
-    }
-
-    .integration .stat {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-    }
-
-    */
 
     .wrap {
         margin-top: 24px;

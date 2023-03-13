@@ -100,6 +100,12 @@ struct Device {
     inner: DeviceInner,
 }
 
+#[derive(SimpleObject)]
+struct DeviceType {
+    kind: String,
+    name: Option<String>,
+}
+
 enum DeviceInner {
     Arc(Arc<crate::device::Device>),
     Owned(crate::device::Device),
@@ -143,6 +149,13 @@ impl Device {
     /// Some devices are spawned by other devices, this tracks that higharchy
     async fn parent(&self) -> Option<&'_ String> {
         self.borrow().parent.as_ref()
+    }
+    /// Type metadata about the device
+    async fn device_type(&self) -> Result<Json> {
+        let ty = &self.borrow().device_type;
+        let json = serde_json::to_value(ty)?;
+
+        Ok(json)
     }
     /// All the features a device exposes
     async fn features<'c>(&self) -> Result<Vec<Feature>> {

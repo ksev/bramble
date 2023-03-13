@@ -18,6 +18,8 @@ export type Scalars = {
 
 export type Device = {
   __typename?: 'Device';
+  /** Type metadata about the device */
+  deviceType: Scalars['JSON'];
   /** All the features a device exposes */
   features: Array<Feature>;
   /** Device id, unique device id */
@@ -51,7 +53,7 @@ export type Feature = {
   /** Feature name, an nice-er to look at name */
   name: Scalars['String'];
   /** The current value of the feature, ONLY source features will have a value */
-  value?: Maybe<Value>;
+  value: Value;
 };
 
 export type Mutation = {
@@ -156,14 +158,14 @@ export type ValueUpdate = {
 export type GetAllDevicesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetAllDevicesQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null, value?: { __typename?: 'Err', message: string } | { __typename?: 'Ok', value: any } | null }> }> };
+export type GetAllDevicesQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, deviceType: any, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null, value: { __typename?: 'Err', message: string } | { __typename?: 'Ok', value: any } }> }> };
 
 export type GetDeviceQueryVariables = Exact<{
   id: Scalars['String'];
 }>;
 
 
-export type GetDeviceQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null }> }> };
+export type GetDeviceQuery = { __typename?: 'Query', device: Array<{ __typename?: 'Device', id: string, name: string, parent?: string | null, deviceType: any, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null }> }> };
 
 export type CreateGenericDeviceMutationVariables = Exact<{
   name: Scalars['String'];
@@ -194,7 +196,7 @@ export type SetAutomateMutation = { __typename?: 'Mutation', automate: number };
 export type DeviceUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DeviceUpdatesSubscription = { __typename?: 'Subscription', device: { __typename?: 'Device', id: string, name: string, parent?: string | null, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null }> } };
+export type DeviceUpdatesSubscription = { __typename?: 'Subscription', device: { __typename?: 'Device', id: string, name: string, parent?: string | null, deviceType: any, features: Array<{ __typename?: 'Feature', id: string, name: string, direction: ValueDirection, kind: ValueKind, meta: any, automate?: any | null }> } };
 
 export type ValueUpdatesSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
@@ -218,6 +220,7 @@ export const GetAllDevicesDocument = gql`
     id
     name
     parent
+    deviceType
     features {
       id
       name
@@ -243,6 +246,7 @@ export const GetDeviceDocument = gql`
     id
     name
     parent
+    deviceType
     features {
       id
       name
@@ -275,6 +279,7 @@ export const DeviceUpdatesDocument = gql`
     id
     name
     parent
+    deviceType
     features {
       id
       name

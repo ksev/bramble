@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use once_cell::sync::Lazy;
 use symbol_table::{Symbol, SymbolTable};
 
@@ -23,6 +25,13 @@ impl From<&str> for IString {
 impl From<&String> for IString {
     fn from(value: &String) -> Self {
         let sym = STRINGS.intern(value);
+        IString(sym)
+    }
+}
+
+impl From<NonZeroU32> for IString {
+    fn from(value: NonZeroU32) -> Self {
+        let sym = value.into();
         IString(sym)
     }
 }

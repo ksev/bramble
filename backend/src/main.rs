@@ -18,14 +18,6 @@ use task::Task;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    /*
-    std::env::set_var("RUST_BACKTRACE", "1");
-
-    if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "backend=debug,tokio=error,runtime=error");
-    }
-    */
-
     tracing_subscriber::fmt::init();
 
     let mut connection = db::connection().await?;
@@ -46,7 +38,7 @@ async fn init(task: Task) -> Result<()> {
 }
 
 async fn http(t: Task) -> Result<()> {
-    let addr = std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.0:8080".into());
+    let addr = std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let addr = std::net::SocketAddr::from_str(&addr)?;
     http::listen(t, addr).await?;
 

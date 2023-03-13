@@ -6,6 +6,7 @@ export const GetAllDevices = gql`
 			id,
 			name,
 			parent,
+			deviceType,
 			features {
 				id,
 				name,
@@ -32,6 +33,7 @@ export const GetDevice = gql`
 			id,
 			name,
 			parent,
+			deviceType, 
 			features {
 				id,
 				name,
@@ -68,6 +70,7 @@ export const DeviceUpdates = gql`
 			id,
 			name,
 			parent,
+			deviceType,
 			features {
 				id,
 				name,

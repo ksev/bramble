@@ -3,7 +3,10 @@ mod device;
 mod feature;
 mod task_spec;
 
-use std::{collections::BTreeSet, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use futures::{Stream, StreamExt, TryStreamExt};
@@ -105,15 +108,33 @@ async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) 
         return Ok(());
     }
 
-    // Execute once on the availiable data
-    program.execute()?;
-
     let mut vals = value::subscribe();
-    let deps: BTreeSet<_> = deps.into_iter().collect();
 
-    while let Some((key, _)) = vals.next().await {
-        if deps.contains(&key) {
-            program.execute()?;
+    // Fetch the current world view
+    let mut input = deps
+        .into_iter()
+        .map(|vid| {
+            let current = value::current(vid).value().clone().unwrap_or_default();
+
+            (vid, current)
+        })
+        .collect();
+
+    // Execute once on the availiable data
+    program.execute(&input)?;
+
+    while let Some((key, value)) = vals.next().await {
+        // Make sure its a value we care about in this Automation
+        if input.contains_key(&key) {
+            // We keep track of the input values into the program away from the global value store
+            // to make sure we have stable values for the entire execution and so we dont miss an intermediate value
+            input.insert(key, value.unwrap_or_default());
+
+            // Execute the program
+            for (k, v) in program.execute(&input)? {
+                // Push program outputs
+                value::push(k, v);
+            }
         }
     }
 

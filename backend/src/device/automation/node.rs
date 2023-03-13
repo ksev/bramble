@@ -1,226 +1,171 @@
 use crate::{
-    program::{ProgramNode, Slots},
+    program::{Inputs, Outputs, ProgramNode},
     strings::IString,
-    value::{self, ValueId},
+    value::ValueId,
 };
 
 use anyhow::Result;
 use serde_json::{json, Value as Json};
 use tracing::debug;
 
-#[derive(Debug)]
-pub struct Device {
-    id: IString,
-}
+type NodeFn0 = fn(&Inputs, &mut Outputs) -> Result<()>;
+type NodeFn1<T> = fn(&mut T, &Inputs, &mut Outputs) -> Result<()>;
 
-impl Device {
-    pub fn new(id: IString) -> Device {
-        Device { id }
+struct AutomationNode0(NodeFn0);
+
+impl ProgramNode for AutomationNode0 {
+    fn run(&mut self, inputs: &Inputs, outputs: &mut Outputs) -> Result<()> {
+        self.0(inputs, outputs)
     }
 }
 
-impl ProgramNode for Device {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        for mut slot in slots.outputs() {
-            let id = ValueId::new(self.id, slot.id());
-            let current = value::current(id);
+struct AutomationNode1<T>(T, NodeFn1<T>);
 
-            match current.value() {
-                Ok(js) => slot.write(js.clone()),
-                Err(e) => anyhow::bail!("{e}"),
-            }
-        }
-
-        Ok(())
+impl<T> ProgramNode for AutomationNode1<T>
+where
+    T: Send,
+{
+    fn run(&mut self, inputs: &Inputs, outputs: &mut Outputs) -> Result<()> {
+        self.1(&mut self.0, inputs, outputs)
     }
 }
 
-#[derive(Debug)]
-pub struct IsNull;
+pub fn node0(f: NodeFn0) -> Box<dyn ProgramNode> {
+    Box::new(AutomationNode0(f))
+}
 
-impl ProgramNode for IsNull {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let v = slots.input_one("input")?.unwrap_or(&Json::Null);
+pub fn node1<T>(data: T, f: NodeFn1<T>) -> Box<dyn ProgramNode>
+where
+    T: Send + 'static,
+{
+    Box::new(AutomationNode1(data, f))
+}
 
-        slots.output("result", json!(v.is_null()));
+pub fn device(id: &mut IString, input: &Inputs, output: &mut Outputs) -> Result<()> {
+    for name in output.slots() {
+        let id = ValueId::new(*id, name);
+        let v = input.program(&id)?.clone();
 
-        Ok(())
+        output.slot(name, v);
     }
+
+    Ok(())
 }
 
-#[derive(Debug)]
-pub struct Target {
-    id: ValueId,
+pub fn target(id: &mut ValueId, input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let v = input.slot_one(id.feature)?.unwrap_or(&Json::Null);
+
+    output.program(id.clone(), v.clone());
+
+    debug!("{:?} target with {:?}", id, v);
+
+    Ok(())
 }
 
-impl Target {
-    pub fn new(id: ValueId) -> Target {
-        Target { id }
+pub fn is_null(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let v = input.slot_one("input")?.unwrap_or(&Json::Null);
+
+    output.slot("result", json!(v.is_null()));
+
+    Ok(())
+}
+
+pub fn or(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let out = input
+        .slot("input")?
+        .into_iter()
+        .any(|v| matches!(v, Json::Bool(true)));
+
+    output.slot("result", json!(out));
+
+    Ok(())
+}
+
+pub fn and(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let out = input
+        .slot("input")?
+        .into_iter()
+        .all(|v| matches!(v, Json::Bool(true)));
+
+    output.slot("result", json!(out));
+
+    Ok(())
+}
+
+pub fn xor(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let ones = input
+        .slot("input")?
+        .into_iter()
+        .filter(|v| matches!(v, Json::Bool(true)))
+        .count();
+
+    if ones == 1 {
+        output.slot("result", json!(true));
+    } else {
+        output.slot("result", json!(false));
     }
+
+    Ok(())
 }
 
-impl ProgramNode for Target {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let v = slots.input_one(self.id.feature)?.unwrap_or(&Json::Null);
+pub fn not(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let val = input.slot_one("input")?;
 
-        value::push(self.id, v.clone());
+    let inverse = match val {
+        Some(Json::Bool(true)) => json!(false),
+        Some(Json::Bool(false)) => json!(true),
+        _ => Json::Null,
+    };
 
-        debug!("{:?} target with {:?}", self.id, v);
+    output.slot("result", inverse);
 
-        Ok(())
+    Ok(())
+}
+
+pub fn latch(high: &mut bool, input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let low = json!(false);
+
+    let signal = input.slot_or("input", &low);
+    let reset = input.slot_or("reset", &low);
+
+    if reset == &json!(true) {
+        *high = false;
     }
+
+    let is_high = signal == &json!(true);
+    let out = json!(is_high || *high);
+
+    output.slot("result", out);
+
+    *high = is_high;
+
+    Ok(())
 }
 
-#[derive(Debug)]
-pub struct Or;
+pub fn toggle(high: &mut bool, input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let signal = input.slot_one("input")?.unwrap_or(&Json::Bool(false));
+    let is_true = matches!(signal, Json::Bool(true));
 
-impl ProgramNode for Or {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let out = slots
-            .input("input")?
-            .into_iter()
-            .any(|v| matches!(v, Json::Bool(true)));
-
-        slots.output("result", json!(out));
-
-        Ok(())
+    if is_true {
+        *high = !*high;
     }
+
+    output.slot("result", json!(high));
+
+    Ok(())
 }
 
-#[derive(Debug)]
-pub struct And;
+pub fn equals(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let this = input.slot_or("input", &Json::Null);
+    let other = input.slot_or("other", &Json::Null);
 
-impl ProgramNode for And {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let out = slots
-            .input("input")?
-            .into_iter()
-            .all(|v| matches!(v, Json::Bool(true)));
+    output.slot("result", json!(this == other));
 
-        slots.output("result", json!(out));
-
-        Ok(())
-    }
+    Ok(())
 }
 
-#[derive(Debug)]
-pub struct Xor;
+pub fn static_value(value: &mut Json, _: &Inputs, output: &mut Outputs) -> Result<()> {
+    output.slot("value", value.clone());
 
-impl ProgramNode for Xor {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let ones = slots
-            .input("input")?
-            .into_iter()
-            .filter(|v| matches!(v, Json::Bool(true)))
-            .count();
-
-        if ones == 1 {
-            slots.output("result", json!(true));
-        } else {
-            slots.output("result", json!(false));
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Not;
-
-impl ProgramNode for Not {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let val = slots.input_one("input")?;
-
-        let inverse = match val {
-            Some(Json::Bool(true)) => json!(false),
-            Some(Json::Bool(false)) => json!(true),
-            _ => Json::Null,
-        };
-
-        slots.output("result", inverse);
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Latch {
-    high: bool,
-}
-
-impl Latch {
-    pub fn new() -> Latch {
-        Latch { high: false }
-    }
-}
-
-impl ProgramNode for Latch {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let input = slots.input_or("input", json!(false));
-        let reset = slots.input_or("reset", json!(false));
-
-        if reset == json!(true) {
-            self.high = false;
-        }
-
-        let is_high = input == json!(true);
-        let out = json!(is_high || self.high);
-
-        slots.output("result", out);
-
-        self.high = is_high;
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Toggle {
-    high: bool,
-}
-
-impl Toggle {
-    pub fn new() -> Toggle {
-        Toggle { high: false }
-    }
-}
-
-impl ProgramNode for Toggle {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let input = slots.input_one("input")?.unwrap_or(&Json::Bool(false));
-        let is_true = matches!(input, Json::Bool(true));
-
-        if is_true {
-            self.high = !self.high;
-        }
-
-        slots.output("result", json!(self.high));
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Equals;
-
-impl ProgramNode for Equals {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        let input = slots.input_or("input", Json::Null);
-        let other = slots.input_or("other", Json::Null);
-
-        slots.output("result", json!(input == other));
-
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Value(pub Json);
-
-impl ProgramNode for Value {
-    fn run(&mut self, slots: &mut Slots) -> Result<()> {
-        slots.output("value", self.0.clone());
-
-        Ok(())
-    }
+    Ok(())
 }

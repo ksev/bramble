@@ -140,7 +140,7 @@ function apiHost() {
 
     const url = new URL("/api/ws", window.location.href);
 
-    url.protocol = url.protocol === "http" ? "ws:" : "wss:";
+    url.protocol = url.protocol === "http:" ? "ws:" : "wss:";
 
     return url.href;
 }
