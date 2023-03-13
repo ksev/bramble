@@ -8,7 +8,7 @@ use serde_derive::{Deserialize, Serialize};
 use tokio::time::timeout;
 use tracing::warn;
 
-use crate::{task::Task, topic::static_topic};
+use crate::{device::random_id, task::Task, topic::static_topic};
 
 static_topic!(CLIENTBUS, ClientAction);
 static_topic!(INCOMING, (String, Bytes));
@@ -134,9 +134,10 @@ pub async fn manage_connections(_: Task) -> Result<()> {
 }
 
 async fn connect(server_info: &MqttServerInfo) -> Result<(AsyncClient, EventLoop)> {
-    let client_id = &format!("bramble-{}", env!("CARGO_PKG_VERSION"));
+    let client_id = format!("bramble-{}", env!("CARGO_PKG_VERSION"));
+    let client_id = random_id(&client_id);
 
-    let mut mqttoptions = MqttOptions::new(client_id, &server_info.host, server_info.port);
+    let mut mqttoptions = MqttOptions::new(&client_id, &server_info.host, server_info.port);
     mqttoptions.set_keep_alive(Duration::from_secs(30));
     mqttoptions.set_max_packet_size(MAX_PACKET_SIZE, MAX_PACKET_SIZE);
 

@@ -3,10 +3,7 @@ mod device;
 mod feature;
 mod task_spec;
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use anyhow::Result;
 use futures::{Stream, StreamExt, TryStreamExt};
