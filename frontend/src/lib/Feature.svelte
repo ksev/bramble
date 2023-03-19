@@ -109,6 +109,7 @@
         justify-content: stretch;
         align-items: stretch;
         flex-grow: 1;
+        height: 100%;
     }
 
     .icon {

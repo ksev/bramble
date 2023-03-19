@@ -104,4 +104,11 @@
         align-items: center;
         color: var(--fadedtext);
     }
+
+    @media (max-width: 700px) {
+        .device-menu {
+            flex-direction: column-reverse;
+            gap: 12px;
+        }
+    }
 </style>

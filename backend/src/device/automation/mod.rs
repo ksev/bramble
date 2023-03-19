@@ -33,6 +33,7 @@ fn prop_to_node(target: ValueId, prop: &Properties) -> Box<dyn ProgramNode> {
         Not => node0(node::not),
         Xor => node0(node::xor),
         Latch => node1(false, node::latch),
+        MathCompare { operator } => node1(*operator, node::compare),
     }
 }
 
@@ -241,6 +242,15 @@ fn unique_connections(connections: &[Connection]) -> Vec<Connection> {
         .collect()
 }
 
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
+pub enum CompareOp {
+    Eq,
+    Gt,
+    Lt,
+    Ge,
+    Le,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "tag", content = "content")]
 pub enum Properties {
@@ -259,6 +269,9 @@ pub enum Properties {
     Xor,
     Latch,
     Toggle,
+
+    // Math
+    MathCompare { operator: CompareOp },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -10,9 +10,8 @@
     import ContextMenu from "$lib/automate/ContextMenu.svelte";
     import TopMenu from "$lib/automate/TopMenu.svelte";
     import { map } from "$data/iterators";
-    import Api from "$data/api";
+    import Api, { ValueKind } from "$data/api";
     import { error, success } from "$data/notification";
-    import { SlotRef } from "$data/automate/node";
 
     export let initialState: ContextInit;
 
@@ -66,9 +65,18 @@
         const n = nodes.all().map(n => {
             const rect = get(layout.get(n.id));
 
+            let properties = n?.settings?.props ? 
+                {
+                    tag: n.properties.tag,
+                    content: {
+                        ...n.properties?.content,
+                        ...n.settings.props,
+                    }
+                } : n.properties;
+
             return {
                 id: n.id,
-                properties: n.properties,
+                properties,
                 position: [
                     rect.origin.x, 
                     rect.origin.y, 
@@ -84,17 +92,30 @@
         }));
 
         // Extract all default values
-        const d = nodes.all().flatMap(n => 
-            n.inputs.map(s => [s.id, s.default])
-                    .filter(([name, v]: [string, string | number | boolean]) => !!v)
-                    .map(([name, v]) => [[n.id, name], v])
+        const defaults = nodes.all().flatMap(n => 
+            n.inputs.map(s => [s.id, s.kind, s.default])
+                    .filter(([_n, _k, v]: [string, ValueKind, string]) => !!v)
+                    .map(([name, kind, v]) => {
+                        let id = [n.id, name];
+                        let val: string | boolean | number;
+
+                        if (kind === ValueKind.Number) {
+                            val = parseInt(v, 10)    
+                        } else if (kind === ValueKind.Bool) {
+                            val = v === 'true';
+                        } else {
+                            val = v;
+                        }
+                        
+                        return [id, val];
+                    })
         );
 
         const program = {
             counter: nodes.counter(),
             nodes: n,
             connections: c,    
-            defaults: d,
+            defaults,
         };
 
         try {

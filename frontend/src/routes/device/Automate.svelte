@@ -2,6 +2,7 @@
     import type { ContextInit } from "$data/automate/automate";
     import { automationTarget, deviceNode, SlotRef, type NodePrototype, isNull, equals } from "$data/automate/node";
     import { AND, NOT, OR, XOR, LATCH, TOGGLE } from "$data/automate/nodes/logic";
+    import { compare } from "$data/automate/nodes/math";
     import { devices } from "$data/devices";
     import { Point } from "$data/geometry";
     import Program from "$lib/automate/Program.svelte";
@@ -45,7 +46,8 @@
             "Device": async (id) => {
                 const target = await devices.byId(id);
                 return deviceNode(target); 
-            } 
+            },
+            "MathCompare": async ({operator}) => compare(operator),
         }
 
         const nodes = [];
@@ -72,7 +74,7 @@
 
                 for (const input of box.inputs) {
                     const id = new SlotRef(node.id, input.id).toString();
-                    const value = defaults.get(id);
+                    const value: any = defaults.get(id);
 
                     if (value !== undefined) {
                         input.default = value;   

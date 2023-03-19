@@ -36,7 +36,7 @@ export interface Node {
  * A utility class to make sure the settings and params do belong togeather but we need 
  * to keep them type erased for rendering
  */
-class Settings {
+export class Settings {
     private constructor(public readonly component: ComponentType<any>, public readonly props: any) {}
 
     static fromComponent<C extends SvelteComponentTyped>(component: ComponentType<C>, props: ComponentProps<C>) {
@@ -51,7 +51,7 @@ export interface Slot {
     label: string,
     kind: ValueKind | "ANY",
     multiple?: boolean,
-    default?: number | string | boolean,
+    default?: string,
     meta?: Record<string, any>
 }
 
@@ -100,68 +100,7 @@ export const automationTarget = (name: string, feature: Feature): NodePrototype 
         },
     ],
     outputs: [],
-})
-
-/*
-export const NUMERIC_OPS: Record<"compare" | "max" | "min", NodePrototype> = {
-    compare: {
-        label: "Compare",
-        icon: "equal",
-        color: colors.number,
-        settings: Settings.fromComponent(NumberCompare, {}),
-        inputs: [
-            {
-                id: "a",
-                label: "A",
-                kind: ValueKind.Number
-            },
-            {
-                id: "b",
-                label: "B",
-                default: 1,
-                kind: ValueKind.Number,
-            },
-        ],
-        outputs: [{
-            id: "result",
-            label: "Result",
-            kind: ValueKind.Bool,
-        }]
-    },
-    max: {
-        label: "Max",
-        icon: "math-greater",
-        color: colors.number,
-        inputs: [{
-            id: "input",
-            label: "Input",
-            multiple: true,
-            kind: ValueKind.Number,
-        }],
-        outputs: [{
-            id: "result",
-            label: "Result",
-            kind: ValueKind.Number,
-        }]
-    },
-    min: {
-        label: "Min",
-        icon: "math-lesser",
-        color: colors.number,
-        inputs: [{
-            id: "input",
-            label: "Input",
-            multiple: true,
-            kind: ValueKind.Number,
-        }],
-        outputs: [{
-            id: "result",
-            label: "Result",
-            kind: ValueKind.Number,
-        }]
-    },
-}
-*/
+});
 
 export function isNull(inputKind: ValueKind | "ANY" = "ANY"): NodePrototype {
     return {
@@ -213,10 +152,10 @@ export function equals(inputKind: ValueKind | "ANY" = "ANY", meta?: Record<strin
 
         switch (inputKind) {
             case ValueKind.Bool:
-                def = true;
+                def = 'true';
                 break;
             case ValueKind.Number:
-                def = 10;
+                def = '10';
                 break;
             case ValueKind.State:
             case ValueKind.String:

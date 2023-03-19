@@ -3,6 +3,7 @@ import { get } from "svelte/store";
 import type { Context } from "./automate";
 import { deviceNode, equals, isNull } from "./node";
 import * as logic from "./nodes/logic";
+import * as math from "./nodes/math";
 
 export type Action = 
     { type: "next", fn: () => MenuItem[] } |
@@ -95,6 +96,14 @@ const LOGICITEMS: MenuItem[] = [
 
 const MATHITEMS: MenuItem[] = [
     BACK_ITEM,
+    {
+        text: "Compare",
+        icon: "equal-double",
+        action: {
+            type: "load",
+            fn: (ctx: Context) => ctx.nodes.add(math.compare()),
+        }
+    }
     /*
     {
         text: "Compare",

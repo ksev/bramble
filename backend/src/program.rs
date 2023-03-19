@@ -26,7 +26,7 @@ impl Inputs<'_> {
             anyhow::bail!("no input named {:?}", n);
         };
 
-        let iter = list.iter().map(|k| &self.values[k]);
+        let iter = list.iter().filter_map(|k| self.values.get(k));
 
         Ok(iter)
     }

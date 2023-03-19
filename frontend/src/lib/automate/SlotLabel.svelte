@@ -27,7 +27,7 @@
         title = `${meta?.possible.join(', ')}`;
     } else if (
         kind === ValueKind.Number && 
-        (meta.max !== undefined || meta.min !== undefined)) {
+        (meta?.max !== undefined || meta?.min !== undefined)) {
         title = `${meta.min}...${meta.max}`; 
     }
 </script>

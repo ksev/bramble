@@ -90,7 +90,7 @@
 
         {#if data.settings}
             <div class="settings">
-                <svelte:component this={data.settings.component} {...data.settings.props} />
+                <svelte:component this={data.settings.component} data={data.settings.props} />
             </div>
         {/if}
 

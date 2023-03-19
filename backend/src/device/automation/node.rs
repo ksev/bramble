@@ -8,6 +8,8 @@ use anyhow::Result;
 use serde_json::{json, Value as Json};
 use tracing::debug;
 
+use super::CompareOp;
+
 type NodeFn0 = fn(&Inputs, &mut Outputs) -> Result<()>;
 type NodeFn1<T> = fn(&mut T, &Inputs, &mut Outputs) -> Result<()>;
 
@@ -166,6 +168,33 @@ pub fn equals(input: &Inputs, output: &mut Outputs) -> Result<()> {
 
 pub fn static_value(value: &mut Json, _: &Inputs, output: &mut Outputs) -> Result<()> {
     output.slot("value", value.clone());
+
+    Ok(())
+}
+
+pub fn compare(op: &mut CompareOp, input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let a = input.slot_or("input", &Json::Null);
+    let b = input.slot_or("other", &Json::Null);
+
+    // Make sure we have values that make sense
+
+    let Some(a) = a.as_f64() else {
+        return Ok(());
+    };
+
+    let Some(b) = b.as_f64() else {
+        return Ok(());
+    };
+
+    let out = match op {
+        CompareOp::Eq => a == b,
+        CompareOp::Gt => a > b,
+        CompareOp::Lt => a < b,
+        CompareOp::Ge => a >= b,
+        CompareOp::Le => a <= b,
+    };
+
+    output.slot("result", json!(out));
 
     Ok(())
 }

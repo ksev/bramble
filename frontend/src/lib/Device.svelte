@@ -80,6 +80,12 @@
         overflow: hidden;
     }
 
+    @media (max-width: 700px) {
+        .mini-view {
+            display: none;
+        }
+    }
+
     .details {
         padding: 3px 0 0 3px;
         display: flex;
