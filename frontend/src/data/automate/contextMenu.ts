@@ -27,7 +27,7 @@ const BACK_ITEM: MenuItem = {
 function* collectDevices() {
     yield BACK_ITEM;
 
-    const d = get(devices.all());
+    const d = get(devices.visible());
 
     for (const device of d) {
         yield {

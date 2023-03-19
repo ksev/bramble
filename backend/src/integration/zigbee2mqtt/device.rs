@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
 use itertools::Itertools;
 use serde_derive::Deserialize;
-use serde_json::{json, Value as Json};
+use serde_json::json;
 use tracing::error;
 
 use crate::{
@@ -103,10 +101,10 @@ impl Definition {
                         id: property.clone(),
                         kind: ValueKind::Bool,
                         direction,
-                        meta: BTreeMap::from([
-                            ("value_on".into(), value_on.clone()),
-                            ("value_off".into(), value_off.clone()),
-                        ]),
+                        meta: json!({
+                            "value_off": value_off.clone(),
+                            "value_on": value_on.clone(),
+                        }),
                         automate: None,
                         virt: false,
                     })
@@ -129,7 +127,7 @@ impl Definition {
                         }
                     };
 
-                    let mut meta = BTreeMap::new();
+                    let mut meta = serde_json::Map::new();
 
                     if let Some(unit) = unit {
                         meta.insert("unit".into(), json!(unit.clone()));
@@ -148,7 +146,7 @@ impl Definition {
                         id: property.clone(),
                         direction,
                         kind: ValueKind::Number,
-                        meta,
+                        meta: meta.into(),
                         automate: None,
                         virt: false,
                     })
@@ -173,7 +171,9 @@ impl Definition {
                         id: property.clone(),
                         direction,
                         kind: ValueKind::State,
-                        meta: BTreeMap::from([("possible".into(), Json::from(values.clone()))]),
+                        meta: json!({
+                           "possible": values.clone(),
+                        }),
                         automate: None,
                         virt: false,
                     })
@@ -197,7 +197,7 @@ impl Definition {
                         id: property.clone(),
                         direction,
                         kind: ValueKind::String,
-                        meta: BTreeMap::new(),
+                        meta: json!({}),
                         automate: None,
                         virt: false,
                     })
@@ -222,7 +222,7 @@ impl Definition {
                         id: property.clone(),
                         direction,
                         kind: ValueKind::Number,
-                        meta: BTreeMap::new(),
+                        meta: json!({}),
                         automate: None,
                         virt: false,
                     })

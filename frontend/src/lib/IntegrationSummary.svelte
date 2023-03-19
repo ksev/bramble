@@ -10,23 +10,27 @@
     let devs = 0;
     let sources = 0;
     let sinks = 0;
-    
-    let children = flatMap(devices.byIntegration(name), d => devices.children(d.id));
 
-    for (const d of children) {
-        devs += 1;
+    let instances = devices.filtered(d => d.deviceType.type === 'integration' && d.deviceType.name === name);
 
-        for (const f of d.features) {
-            switch (f.direction) {
-                case ValueDirection.Sink:
-                    sinks += 1;
-                    break;
-                case ValueDirection.Source:
-                    sources += 1;
-                    break;
-                case ValueDirection.SourceSink:
-                    sinks += 1;
-                    sources += 1;
+    $: {
+        let children = flatMap($instances, d => devices.children(d.id));
+
+        for (const d of children) {
+            devs += 1;
+
+            for (const f of d.features) {
+                switch (f.direction) {
+                    case ValueDirection.Sink:
+                        sinks += 1;
+                        break;
+                    case ValueDirection.Source:
+                        sources += 1;
+                        break;
+                    case ValueDirection.SourceSink:
+                        sinks += 1;
+                        sources += 1;
+                }
             }
         }
     }
@@ -40,12 +44,12 @@
 	        Devices
 	    </div>
 	    <div class="stat">
-	        <Icon name="stack-push" size={16} color={Colors.source} />
+	        <Icon name="stack-push" size={16} color={Colors.sink} />
 	        <strong>{sinks}</strong> 
 	        Inputs
 	    </div>
 	    <div class="stat">
-	        <Icon name="stack-pop" size={16} color={Colors.sink} />
+	        <Icon name="stack-pop" size={16} color={Colors.source} />
 	        <strong>{sources}</strong> 
 	        Outputs
 	    </div>
@@ -53,8 +57,7 @@
 {/if}
 
 <style>
-	
-    .integration-summary {
+	.integration-summary {
         display: flex;
         flex-direction: column; 
         gap: 2px;

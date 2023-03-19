@@ -10,6 +10,7 @@
     import Api from "$data/api";
     import { ValueKind } from "$data/api";
     import WordsInput from "$lib/WordsInput.svelte";
+    import { error, success } from "$data/notification";
 
 	const types: { value: ValueKind, label: string }[] = [
 		{ value: ValueKind.Bool, label: 'Bool' },
@@ -26,7 +27,7 @@
 	let deviceId: string;
 	let deviceName: string;
 	let working: boolean = false;
-	let devs = devices.all();
+	let devs = devices.visible();
 
 	let deviceBufferValid = false;
 
@@ -63,6 +64,10 @@
 			deviceName = '';
 			name = '';
 			possible = [];
+
+			success("ADDED");
+		} catch(e) {
+			error(e.toString());	
 		} finally {
 			working = false;
 		}

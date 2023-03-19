@@ -53,7 +53,7 @@ export const CreateGenericDevice = gql`
 `;
 
 export const CreateValueBuffer = gql`
-	mutation createValueBuffer($deviceId: String!, $name: String!, $kind: ValueKind!, $meta: JSONObject) {
+	mutation createValueBuffer($deviceId: String!, $name: String!, $kind: ValueKind!, $meta: JSON) {
 		valueBuffer(deviceId: $deviceId, name: $name, kind: $kind, meta: $meta)
 	}
 `;
@@ -106,4 +106,10 @@ export const AddZigbee2MqttIntegration = gql`
 			id
 		}
 	}
+`;
+
+export const SetSunLocation = gql`
+	mutation setSunLocation($lat: Float!, $lon: Float!) {
+		sunLocation(lat: $lat, lon: $lon)
+	}	
 `;

@@ -1,7 +1,6 @@
 import { derived, writable, type Readable, type Writable } from "svelte/store";
 import Api, { type ApiClient, type Value } from '$data/api';
 import type { Device } from "./api-gen/api_types";
-import { identity } from "svelte/internal";
 import { MutablePromise } from "./utils";
 
 const valueStore = new Map<string, Writable<Value>>();
@@ -40,10 +39,20 @@ class Devices {
         });
     }
 
-    all = (): Readable<Device[]> => {
-        return derived(this.deviceList, identity);
+    visible = (): Readable<Device[]> => {
+        return this.filtered(d => d.deviceType.type !== "integration");
     }
 
+    single = (id: string): Readable<Device> => {
+        return derived(this.deviceList, () => this.deviceMap.get(id))
+    }
+
+    filtered = (predicate: (d: Device) => boolean): Readable<Device[]> => {
+        return derived(this.deviceList, (list) => {
+            return list.filter(predicate);
+        });
+    }
+    
     byId = async (id: string): Promise<Device> => {
         await this.initialized;
         return this.deviceMap.get(id)
@@ -59,15 +68,6 @@ class Devices {
                 yield d;
             }
         }
-    }
-
-    *byIntegration(name: string) {
-        for (const d of this.iter()) {
-            if (d.deviceType.name === name) {
-                yield d
-            }
-        }
-        
     }
 
     private async fullSync(client: ApiClient) {

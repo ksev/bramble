@@ -272,8 +272,6 @@ pub struct Node {
 mod test {
     use std::collections::BTreeMap;
 
-    use crate::value;
-
     use super::*;
     use serde_json::json;
 

@@ -192,6 +192,21 @@ export function* filter<T>(it: Iterable<T>, callback: (val: T) => boolean) {
 }
 
 /**
+ * Count the number of elements in the iterator
+ * This will consume the iterator, so if the iterator is infinite, this will never return
+ * @param it A base iterator
+ */
+export function count<T>(it: Iterable<T>): number {
+    let i = 0;
+
+    for (const _ of it) {
+        i += 1;
+    }
+
+    return i;
+}
+
+/**
  * Iterate of an iterator using a sliding window aproach.
  * Values a going to be yielded in groups of N until the iterator is exhausted
  * @param it Iterator

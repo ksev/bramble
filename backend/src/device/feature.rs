@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use anyhow::Result;
 use async_graphql::Enum;
 use futures::Stream;
@@ -16,7 +14,7 @@ pub struct Feature {
     pub virt: bool,
     pub direction: ValueDirection,
     pub kind: ValueKind,
-    pub meta: BTreeMap<String, Json>,
+    pub meta: Json,
     pub automate: Option<Automation>,
 }
 
@@ -29,7 +27,7 @@ impl Feature {
         sqlx::query(include_str!("../../sql/feature_by_device.sql"))
             .bind(device_id)
             .try_map(|row: SqliteRow| {
-                let meta: SqlJson<BTreeMap<String, Json>> = row.try_get("meta")?;
+                let meta: SqlJson<Json> = row.try_get("meta")?;
                 let auto: Option<SqlJson<Automation>> = row.try_get("automate")?;
 
                 Ok(Feature {
@@ -56,7 +54,7 @@ impl Feature {
         ))
         .bind(device_id)
         .try_map(|row: SqliteRow| {
-            let meta: SqlJson<BTreeMap<String, Json>> = row.try_get("meta")?;
+            let meta: SqlJson<Json> = row.try_get("meta")?;
             let auto: Option<SqlJson<Automation>> = row.try_get("automate")?;
 
             Ok(Feature {
@@ -81,7 +79,7 @@ impl Feature {
             .bind(device_id)
             .bind(feature_id)
             .try_map(|row: SqliteRow| {
-                let meta: SqlJson<BTreeMap<String, Json>> = row.try_get("meta")?;
+                let meta: SqlJson<Json> = row.try_get("meta")?;
                 let auto: Option<SqlJson<Automation>> = row.try_get("automate")?;
 
                 Ok(Feature {
@@ -133,7 +131,7 @@ impl Feature {
         device_id: &str,
         name: String,
         kind: ValueKind,
-        meta: BTreeMap<String, Json>,
+        meta: Json,
         conn: &mut SqliteConnection,
     ) -> Result<Feature> {
         let id = super::random_id("virtual");

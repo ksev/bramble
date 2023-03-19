@@ -13,7 +13,6 @@ export type Scalars = {
   Int: number;
   Float: number;
   JSON: any;
-  JSONObject: any;
 };
 
 export type Device = {
@@ -49,7 +48,7 @@ export type Feature = {
    * Json metadata about the feature
    * Common meta data is Number unit a list of possible States for state
    */
-  meta: Scalars['JSONObject'];
+  meta: Scalars['JSON'];
   /** Feature name, an nice-er to look at name */
   name: Scalars['String'];
   /** The current value of the feature, ONLY source features will have a value */
@@ -65,6 +64,11 @@ export type Mutation = {
    * attach value buffers to
    */
   genericDevice: Scalars['String'];
+  /**
+   * Set the location of the sun device
+   * If the sun device does not exist, create it
+   */
+  sunLocation: Scalars['Boolean'];
   /**
    * Create a value buffer on the target device
    * this device must exist
@@ -87,10 +91,16 @@ export type MutationGenericDeviceArgs = {
 };
 
 
+export type MutationSunLocationArgs = {
+  lat: Scalars['Float'];
+  lon: Scalars['Float'];
+};
+
+
 export type MutationValueBufferArgs = {
   deviceId: Scalars['String'];
   kind: ValueKind;
-  meta?: InputMaybe<Scalars['JSONObject']>;
+  meta?: InputMaybe<Scalars['JSON']>;
   name: Scalars['String'];
 };
 
@@ -178,7 +188,7 @@ export type CreateValueBufferMutationVariables = Exact<{
   deviceId: Scalars['String'];
   name: Scalars['String'];
   kind: ValueKind;
-  meta?: InputMaybe<Scalars['JSONObject']>;
+  meta?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
@@ -212,6 +222,14 @@ export type AddZigbee2MqttIntegrationMutationVariables = Exact<{
 
 
 export type AddZigbee2MqttIntegrationMutation = { __typename?: 'Mutation', zigbee2Mqtt: { __typename?: 'Device', id: string } };
+
+export type SetSunLocationMutationVariables = Exact<{
+  lat: Scalars['Float'];
+  lon: Scalars['Float'];
+}>;
+
+
+export type SetSunLocationMutation = { __typename?: 'Mutation', sunLocation: boolean };
 
 
 export const GetAllDevicesDocument = gql`
@@ -264,7 +282,7 @@ export const CreateGenericDeviceDocument = gql`
 }
     `;
 export const CreateValueBufferDocument = gql`
-    mutation createValueBuffer($deviceId: String!, $name: String!, $kind: ValueKind!, $meta: JSONObject) {
+    mutation createValueBuffer($deviceId: String!, $name: String!, $kind: ValueKind!, $meta: JSON) {
   valueBuffer(deviceId: $deviceId, name: $name, kind: $kind, meta: $meta)
 }
     `;
@@ -314,6 +332,11 @@ export const AddZigbee2MqttIntegrationDocument = gql`
   }
 }
     `;
+export const SetSunLocationDocument = gql`
+    mutation setSunLocation($lat: Float!, $lon: Float!) {
+  sunLocation(lat: $lat, lon: $lon)
+}
+    `;
 export type Requester<C = {}, E = unknown> = <R, V>(doc: DocumentNode, vars?: V, options?: C) => Promise<R> | AsyncIterable<R>
 export function getSdk<C, E>(requester: Requester<C, E>) {
   return {
@@ -340,6 +363,9 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     addZigbee2MqttIntegration(variables: AddZigbee2MqttIntegrationMutationVariables, options?: C): Promise<AddZigbee2MqttIntegrationMutation> {
       return requester<AddZigbee2MqttIntegrationMutation, AddZigbee2MqttIntegrationMutationVariables>(AddZigbee2MqttIntegrationDocument, variables, options) as Promise<AddZigbee2MqttIntegrationMutation>;
+    },
+    setSunLocation(variables: SetSunLocationMutationVariables, options?: C): Promise<SetSunLocationMutation> {
+      return requester<SetSunLocationMutation, SetSunLocationMutationVariables>(SetSunLocationDocument, variables, options) as Promise<SetSunLocationMutation>;
     }
   };
 }

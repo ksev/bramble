@@ -9,7 +9,7 @@
 
     import Colors from '$data/colors';    
 
-    const all = devices.all();
+    const all = devices.visible();
 
     $: empty = $all.length === 0;
 </script>

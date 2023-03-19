@@ -11,8 +11,7 @@
     const { layout, selected } = automateContext();
 
     function alignTop() {
-        const sel = get(selected);
-        const layouts = Array.from(sel)
+        const layouts = Array.from($selected)
             .map((n) => layout.get(n))
             .sort((a, b) => get(a).origin.y - get(b).origin.y);
 

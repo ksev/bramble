@@ -1,18 +1,28 @@
 <script lang="ts">    
-    import { devices } from '$data/devices';
     import Zigbee2Mqtt from '../../assets/zigbee2mqtt.svg';
     import Mqtt from '../../assets/mqtt.svg';
+    import { devices } from '$data/devices';
 
     import Section from '$lib/Section.svelte';
     import Icon from '$lib/Icon.svelte';
     import SubMenu from '$lib/SubMenu.svelte';
 
     import Colors from '$data/colors';
-    import { flatMap } from '$data/iterators';
-    import { ValueDirection } from '$data/api';
     import IntegrationSummary from '$lib/IntegrationSummary.svelte';
+    import Api from '$data/api';
 
     const virtualGradient = `linear-gradient(180deg, ${Colors.feature} 50%, ${Colors.automation} 90%)`;
+
+    let sun = devices.single("thesun");
+
+    function setSunLocation() {
+        navigator.geolocation.getCurrentPosition(p => {
+            $Api.setSunLocation({
+                lat: p.coords.latitude,
+                lon: p.coords.longitude,
+            })
+        });
+    }
 </script>
 
 <div>
@@ -47,6 +57,22 @@
                         <span>Virtual <strong>Device</strong></span>
                         <Icon name="ghost" color={virtualGradient} size={75} />
                     </a>
+                    
+                    <button class="integration" on:click={setSunLocation}>
+                        <span>The <strong>Sun</strong></span>
+                        <Icon name="sunset-2"  color={Colors.source} size={75} />
+
+                        {#if $sun} 
+                            <div class="sun-loc">
+                                <div>
+                                    <Icon name="map-pin" color={Colors.source} size={18} />
+                                </div>
+                                <div>
+                                    (insert loc here)
+                                </div>
+                            </div>
+                        {/if}
+                    </button>
                 </SubMenu>
             </div>
         </div>
@@ -93,5 +119,12 @@
     .wrap {
         margin-top: 24px;
         display: flex;
+    }
+
+    .sun-loc {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
     }
 </style>

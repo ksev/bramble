@@ -1,11 +1,11 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 use futures::TryStreamExt;
 
 use anyhow::Result;
 use async_graphql::{Context, Object, Schema, SimpleObject, Subscription};
 use futures::{Stream, StreamExt};
-use serde_json::Value as Json;
+use serde_json::{json, Value as Json};
 
 use crate::{
     db,
@@ -196,7 +196,7 @@ impl<'a> Feature<'a> {
     }
     /// Json metadata about the feature
     /// Common meta data is Number unit a list of possible States for state
-    async fn meta(&self) -> &BTreeMap<String, Json> {
+    async fn meta(&self) -> &Json {
         &self.inner.meta
     }
     /// The current value of the feature, ONLY source features will have a value
@@ -237,7 +237,7 @@ impl Mutation {
         device_id: String,
         name: String,
         kind: crate::device::ValueKind,
-        meta: Option<BTreeMap<String, Json>>,
+        meta: Option<Json>,
     ) -> Result<String> {
         let mut conn = db::connection().await?;
 
@@ -253,6 +253,44 @@ impl Mutation {
         notify_device_changed(&device_id).await?;
 
         Ok(feature.id)
+    }
+    /// Set the location of the sun device
+    /// If the sun device does not exist, create it
+    async fn sun_location<'c>(&self, ctx: &Context<'c>, lat: f64, lon: f64) -> Result<bool> {
+        let task = ctx.data_unchecked::<Task>();
+
+        let dev = crate::device::Device {
+            id: "thesun".into(),
+            name: "The Sun".into(),
+            parent: None,
+            device_type: crate::device::DeviceType::Hardware,
+            task_spec: crate::device::TaskSpec::Sun { lat, lon },
+        };
+
+        let feature = crate::device::Feature {
+            id: "state".into(),
+            name: "State".into(),
+            virt: false,
+            direction: crate::device::ValueDirection::Source,
+            kind: crate::device::ValueKind::State,
+            meta: json!({
+                "possible": ["day", "night"],
+            }),
+            automate: None,
+        };
+
+        let mut txn = db::begin().await?;
+
+        dev.save(&mut txn).await?;
+        feature.save(&dev.id, &mut txn).await?;
+
+        txn.commit().await?;
+
+        crate::device::spawn_device_tasks(task, &dev);
+
+        crate::device::notify_changed(dev);
+
+        Ok(true)
     }
     /// Add Zigbee2Mqtt integration
     async fn zigbee_2_mqtt<'c>(

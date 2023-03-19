@@ -7,17 +7,20 @@
     import SubMenu from '$lib/SubMenu.svelte';
     import TextInput from '$lib/TextInput.svelte';
     import api from '$data/api';
+    import { devices } from '$data/devices';
     import { error, success } from '$data/notification';
+    import { derived } from 'svelte/store';
+    import { count } from '$data/iterators';
 
     let host: string;
     let password: string;
     let username: string;
     let port = 1883;
 
-    let connected = [];
+    let connected = devices.filtered(d => d.deviceType.name === "zigbee2mqtt");
 
     let isEmpty = true;
-    $: isEmpty = connected.length === 0;
+    $: isEmpty = $connected.length === 0;
 
     async function connect() {
         try {
@@ -61,10 +64,10 @@
                 Not connected to <strong>Zigbee2MQTT</strong>
             </span>
         {:else}
-            {#each connected as server}
+            {#each $connected as server}
                 <div class="server">
-                    <div class="host"><strong>{server.host}</strong>:{server.port}</div>
-                    <div class="devices"><Icon name="microchip" color={Colors.device} size={18} /> {server.devices}</div>
+                    <div class="host">{server.name}</div>
+                    <div class="devices"><Icon name="cpu" color={Colors.device} size={18} /> {count(devices.children(server.id))}</div>
                 </div>
             {/each} 
         {/if}

@@ -6,7 +6,12 @@ mod task_spec;
 use std::sync::Arc;
 
 use anyhow::Result;
+use chrono::naive::Days;
+use chrono::prelude::*;
 use futures::{Stream, StreamExt, TryStreamExt};
+use serde_json::json;
+use spa::{calc_sunrise_and_set, SunriseAndSet};
+use tracing::debug;
 
 use crate::{
     db,
@@ -86,6 +91,7 @@ pub fn spawn_device_tasks(task: &Task, device: &Device) {
                 crate::integration::zigbee2mqtt::zigbee2mqtt_device,
             );
         }
+        TaskSpec::Sun { lat, lon } => task.spawn_with_argument("thesun", (*lat, *lon), the_sun),
         TaskSpec::NoOp => {}
     }
 }
@@ -136,4 +142,51 @@ async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) 
     }
 
     Ok(())
+}
+
+async fn the_sun((lat, lon): (f64, f64), _: Task) -> Result<()> {
+    let id = ValueId::new("thesun", "state");
+
+    loop {
+        let now = Utc::now();
+
+        let rise_set = match calc_sunrise_and_set(now.clone(), lat, lon) {
+            Ok(rise_set) => rise_set,
+            Err(e) => {
+                value::set_current(id, Err(format!("{e:?}")));
+                anyhow::bail!(e);
+            }
+        };
+
+        let (until, value) = match rise_set {
+            SunriseAndSet::PolarNight => {
+                // It will be night for atleast a day more
+                (now + Days::new(1), "night")
+            }
+            SunriseAndSet::PolarDay => {
+                // It will be day for atleast a day more
+                (now + Days::new(1), "day")
+            }
+            SunriseAndSet::Daylight(from, to) => {
+                if from <= now && now <= to {
+                    (to, "day")
+                } else if from > now {
+                    // Before sunrise
+                    (from, "night")
+                } else {
+                    let leap = chrono::Duration::hours(22);
+                    // After sunrise, there is a good chance the sun up tomorrow is at the same-ish time
+                    (from + leap, "night")
+                }
+            }
+        };
+
+        value::set_current(id, Ok(json!(value)));
+
+        let duration = until.signed_duration_since(now).to_std()?;
+
+        debug!("next sun check in {duration:?}");
+
+        tokio::time::sleep(duration).await;
+    }
 }

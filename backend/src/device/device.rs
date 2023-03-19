@@ -97,7 +97,7 @@ impl Device {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum DeviceType {
-    #[serde(rename = "intergration")]
+    #[serde(rename = "integration")]
     Integration { name: String },
     #[serde(rename = "hardware")]
     Hardware,

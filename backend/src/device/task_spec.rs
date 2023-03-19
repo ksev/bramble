@@ -11,4 +11,6 @@ pub enum TaskSpec {
     Zigbee2MqttDevice(MqttTopic),
     #[serde(rename = "noop")]
     NoOp,
+    #[serde(rename = "sun")]
+    Sun { lat: f64, lon: f64 },
 }
