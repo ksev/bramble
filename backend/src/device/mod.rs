@@ -124,7 +124,10 @@ async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) 
         .collect();
 
     // Execute once on the availiable data
-    program.execute(&input)?;
+    for (k, v) in program.execute(&input)? {
+        // Push program outputs
+        value::push(k, v);
+    }
 
     while let Some((key, value)) = vals.next().await {
         // Make sure its a value we care about in this Automation
