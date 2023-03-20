@@ -77,6 +77,12 @@
     margin: 0;
   }
 
+  @media (max-width: 700px) {
+    section {
+      padding: 12px;
+    }
+  }
+
   menubar {
     width: 80px;
     border-right: 2px solid var(--container);

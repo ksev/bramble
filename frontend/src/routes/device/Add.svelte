@@ -48,8 +48,6 @@
                 <SubMenu>
                     <a class="integration" href="#/device/add/mqtt">
                         <span>MQTT</span>
-                        <!--
-                        -->
                         <img src={Mqtt} alt="Zigbee2MQTT" />
                     </a>
 
@@ -68,7 +66,7 @@
                                     <Icon name="map-pin" color={Colors.source} size={18} />
                                 </div>
                                 <div>
-                                    (insert loc here)
+                                    (active)
                                 </div>
                             </div>
                         {/if}
@@ -119,6 +117,7 @@
     .wrap {
         margin-top: 24px;
         display: flex;
+        flex-wrap:wrap;
     }
 
     .sun-loc {

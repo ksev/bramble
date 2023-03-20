@@ -5,6 +5,9 @@
 <style>
     menubar {
         display: flex;
+        max-width: 100%;
+        flex-wrap: wrap;
+
         padding: 6px;
         background-color: var(--container);
         border-radius: 8px;
@@ -16,6 +19,7 @@
         border-radius: 8px;
         padding: 12px;
         cursor: pointer;
+        flex: 1;
 
         transition: background-color 100ms linear, color 100ms linear;
     }
