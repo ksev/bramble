@@ -168,6 +168,7 @@ async fn the_sun((lat, lon): (f64, f64), _: Task) -> Result<()> {
                 (now + Days::new(1), "day")
             }
             SunriseAndSet::Daylight(from, to) => {
+                println!("{now:?} == {from:?} -> {to:?}");
                 if from <= now && now <= to {
                     (to, "day")
                 } else if from > now {
