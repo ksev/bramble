@@ -114,6 +114,10 @@
         height: 75px;
     }
 
+    .integration span {
+        text-align: center;
+    }
+
     .wrap {
         margin-top: 24px;
         display: flex;

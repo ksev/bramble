@@ -16,6 +16,10 @@
     $: {
         let children = flatMap($instances, d => devices.children(d.id));
 
+        devs = 0;
+        sources = 0;
+        sinks = 0;
+
         for (const d of children) {
             devs += 1;
 

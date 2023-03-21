@@ -1,16 +1,15 @@
 mod automation;
 mod device;
 mod feature;
+mod sun;
 mod task_spec;
 
 use std::sync::Arc;
 
 use anyhow::Result;
-use chrono::naive::Days;
-use chrono::prelude::*;
 use futures::{Stream, StreamExt, TryStreamExt};
 use serde_json::json;
-use spa::{calc_sunrise_and_set, SunriseAndSet};
+use time::{Duration, OffsetDateTime};
 use tracing::debug;
 
 use crate::{
@@ -24,6 +23,8 @@ pub use automation::Automation;
 pub use device::*;
 pub use feature::*;
 pub use task_spec::*;
+
+use self::sun::SunPhase;
 
 static_topic!(CHANGED, Arc<Device>);
 
@@ -148,49 +149,40 @@ async fn automation_task((mut program, deps): (Program, Vec<ValueId>), _: Task) 
 }
 
 async fn the_sun((lat, lon): (f64, f64), _: Task) -> Result<()> {
-    let id = ValueId::new("thesun", "state");
+    let state_id = ValueId::new("thesun", "state");
+    let up_id = ValueId::new("thesun", "up");
+    let height = 0.0;
 
     loop {
-        let now = Utc::now();
+        let off = OffsetDateTime::now_utc();
 
-        let rise_set = match calc_sunrise_and_set(now.clone(), lat, lon) {
-            Ok(rise_set) => rise_set,
-            Err(e) => {
-                value::set_current(id, Err(format!("{e:?}")));
-                anyhow::bail!(e);
-            }
+        let set_start = sun::time_at_phase(off, SunPhase::SunsetStart, lat, lon, height);
+        let set = sun::time_at_phase(off, SunPhase::Sunset, lat, lon, height);
+
+        let rise = sun::time_at_phase(off, SunPhase::Sunrise, lat, lon, height);
+        let rise_end = sun::time_at_phase(off, SunPhase::SunriseEnd, lat, lon, height);
+
+        let up = off >= rise && off <= set;
+        let in_rise = off >= rise && off <= rise_end;
+        let in_set = off >= set_start && off <= set;
+
+        let next = [set, set_start, rise, rise_end]
+            .into_iter()
+            .filter(|&d| d >= off)
+            .min()
+            .unwrap_or(rise + Duration::hours(22))
+            - off;
+
+        let state = match (up, in_rise, in_set) {
+            (_, true, _) => "sunrise",
+            (_, _, true) => "sunset",
+            (true, _, _) => "day",
+            (false, _, _) => "night",
         };
 
-        let (until, value) = match rise_set {
-            SunriseAndSet::PolarNight => {
-                // It will be night for atleast a day more
-                (now + Days::new(1), "night")
-            }
-            SunriseAndSet::PolarDay => {
-                // It will be day for atleast a day more
-                (now + Days::new(1), "day")
-            }
-            SunriseAndSet::Daylight(from, to) => {
-                println!("{now:?} == {from:?} -> {to:?}");
-                if from <= now && now <= to {
-                    (to, "day")
-                } else if from > now {
-                    // Before sunrise
-                    (from, "night")
-                } else {
-                    let leap = chrono::Duration::hours(22);
-                    // After sunrise, there is a good chance the sun up tomorrow is at the same-ish time
-                    (from + leap, "night")
-                }
-            }
-        };
+        value::set_current(state_id, Ok(json!(state)));
+        value::set_current(up_id, Ok(json!(up)));
 
-        value::set_current(id, Ok(json!(value)));
-
-        let duration = until.signed_duration_since(now).to_std()?;
-
-        debug!("next sun check in {duration:?}");
-
-        tokio::time::sleep(duration).await;
+        tokio::time::sleep(next.try_into()?).await;
     }
 }

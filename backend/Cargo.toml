@@ -31,5 +31,4 @@ tracing-subscriber = { version="0.3", features = ["env-filter"] }
 tower-http = { version = "0.4.0", features = ["fs", "trace", "cors"] }
 symbol_table = "0.3.0"
 rand = "0.8.5" 
-spa = "0.3.0"
-chrono = "0.4.24"
+time = { version = "0.3", features = ["macros"] }

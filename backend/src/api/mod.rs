@@ -267,22 +267,33 @@ impl Mutation {
             task_spec: crate::device::TaskSpec::Sun { lat, lon },
         };
 
-        let feature = crate::device::Feature {
+        let feature_state = crate::device::Feature {
             id: "state".into(),
-            name: "State".into(),
+            name: "Phase".into(),
             virt: false,
             direction: crate::device::ValueDirection::Source,
             kind: crate::device::ValueKind::State,
             meta: json!({
-                "possible": ["day", "night"],
+                "possible": ["day", "night", "sunset", "sunrise"],
             }),
+            automate: None,
+        };
+
+        let feature_up = crate::device::Feature {
+            id: "up".into(),
+            name: "Up".into(),
+            virt: false,
+            direction: crate::device::ValueDirection::Source,
+            kind: crate::device::ValueKind::Bool,
+            meta: json!({}),
             automate: None,
         };
 
         let mut txn = db::begin().await?;
 
         dev.save(&mut txn).await?;
-        feature.save(&dev.id, &mut txn).await?;
+        feature_state.save(&dev.id, &mut txn).await?;
+        feature_up.save(&dev.id, &mut txn).await?;
 
         txn.commit().await?;
 
