@@ -27,9 +27,9 @@ export interface Node {
     // Settings component, if the node has one
     settings?: Settings
     // Callback that gets fired when a connection is made 
-    onAddedConnection?: (ctx: Context, local: SlotRef, remote: SlotRef) => void
+    onAddedConnection?: (this: Node, ctx: Context, local: SlotRef, remote: SlotRef) => void
     // Callback that gets fired when a connection is broken
-    onRemovedConnection?: (ctx: Context, local: SlotRef, remote: SlotRef) => void
+    onRemovedConnection?: (this: Node, ctx: Context, local: SlotRef, remote: SlotRef) => void
 }
 
 /**
@@ -148,26 +148,11 @@ export function equals(inputKind: ValueKind | "ANY" = "ANY", meta?: Record<strin
     }];
 
     if (inputKind != "ANY") {
-        let def: boolean | string | number;
-
-        switch (inputKind) {
-            case ValueKind.Bool:
-                def = 'true';
-                break;
-            case ValueKind.Number:
-                def = '10';
-                break;
-            case ValueKind.State:
-            case ValueKind.String:
-                def = "";
-                break;
-        }
-
         inputs.push({
             id: "other",
             label: "Other",
             kind: inputKind,
-            default: def,
+            default: kindDefault(inputKind),
             meta,
         });
     }
@@ -205,6 +190,55 @@ export function equals(inputKind: ValueKind | "ANY" = "ANY", meta?: Record<strin
     }
 }
 
+export function alt(kind: ValueKind | "ANY" = "ANY"): NodePrototype {
+    return {
+        label: "If",
+        icon: "a-b",
+        properties: { tag: "If", content: {kind} },
+        color: kindColor(kind),
+        inputs: [
+            {
+                id: "input",
+                label: "Input",
+                kind: ValueKind.Bool,
+            },
+            {
+                id: "a",
+                label: "A",
+                default: kindDefault(kind),
+                kind,
+            },
+            {
+                id: "b",
+                label: "B",
+                default: kindDefault(kind),
+                kind,
+            },
+        ],
+        outputs: [{
+            id: "result",
+            label: "Result",
+            kind,     
+        }],
+        onAddedConnection: function(ctx, local, remote)  {
+            if (local.name === "input") return;
+
+            if (this.properties.content.kind === "ANY") {
+                const r = ctx.nodes.getSlot(remote);
+                ctx.nodes.replace(this.id, alt(r.kind));
+            }
+        },
+        onRemovedConnection: function(ctx, local) {
+            if (local.name === "input") return;
+            const conn = connectedSlots(ctx, this).filter(n => n !== "input");
+
+            if (conn.length === 0) {
+                ctx.nodes.replace(this.id, alt());
+            }  
+        }
+    }
+}
+
 export function deviceNode(device: Device): NodePrototype {
     const outputs: Slot[] = device
         .features
@@ -227,6 +261,41 @@ export function deviceNode(device: Device): NodePrototype {
         inputs: [],
         outputs
     }
+}
+
+
+function kindDefault(kind: ValueKind | "ANY"): string {
+    switch (kind) {
+         case ValueKind.Bool:
+            return 'true';
+        case ValueKind.Number:
+            return '10';
+        case ValueKind.State:
+        case ValueKind.String:
+            return "";
+        case "ANY":
+            return undefined;
+    }
+}
+
+function connectedSlots(ctx: Context, node: Node): string[] {
+    const out = [];
+
+    for (const o of node.outputs) {
+        const ref = SlotRef.fromTuple([node.id, o.id]);
+        if (ctx.connections.hasConnection(ref)) {
+            out.push(o.id);
+        }
+    }
+
+    for (const i of node.inputs) {
+        const ref = SlotRef.fromTuple([node.id, i.id]);
+        if (ctx.connections.hasConnection(ref)) {
+            out.push(i.id);
+        }
+    }
+
+    return out;    
 }
 
 /**

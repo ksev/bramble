@@ -265,15 +265,21 @@ export function nodeStore(ctx: Context, init: ContextInit) {
         replace: (id: number, node: NodePrototype) => {
             const old = backend.get(id);
 
+            backend.set(id, {
+                ...node,
+                id: id
+            });
+
+            set(Array.from(backend.values()));
+
             // Remove connections that are no longer valid
             // Because the slot arrangement has changed
             if (old) {
                 const cb = (a: Slot, b: Slot) => a.id === b.id;
-                const inputDiff = diff(old.inputs, node.inputs, cb).removed;
-                const outputDiff = diff(old.outputs, node.outputs, cb).removed;
+                const inputDiff = diff(old.inputs, node.inputs, cb);
+                const outputDiff = diff(old.outputs, node.outputs, cb);
 
-                
-                for (const input of inputDiff) {
+                for (const input of inputDiff.removed) {
                     const ref = new SlotRef(old.id, input.id);   
                     const conns = Array.from(ctx.connections.get(ref));
 
@@ -282,7 +288,7 @@ export function nodeStore(ctx: Context, init: ContextInit) {
                     }
                 }
 
-                for (const output of outputDiff) {
+                for (const output of outputDiff.removed) {
                     const ref = new SlotRef(old.id, output.id);            
                     const conns = Array.from(ctx.connections.get(ref));
 
@@ -290,14 +296,31 @@ export function nodeStore(ctx: Context, init: ContextInit) {
                         ctx.connections.remove(conn);
                     }
                 }
-            }
-            
-            backend.set(id, {
-                ...node,
-                id: id
-            });
 
-            set(Array.from(backend.values()));
+                for (const [os, ns] of inputDiff.same) {
+                    if (os.kind === ns.kind) continue;
+
+                    const ref = new SlotRef(old.id, os.id);
+                    const conns = Array.from(ctx.connections.get(ref));
+
+                    for (const {from, to} of conns) {
+                        const n = backend.get(from.nodeId);
+                        if (n?.onAddedConnection) n.onAddedConnection.call(n, ctx, from, to);
+                    }
+                }
+
+                for (const [os, ns] of outputDiff.same) {
+                    if (os.kind === ns.kind) continue;
+
+                    const ref = new SlotRef(old.id, os.id);
+                    const conns = Array.from(ctx.connections.get(ref));
+
+                    for (const {from, to} of conns) {
+                        const n = backend.get(to.nodeId);
+                        if (n?.onAddedConnection) n.onAddedConnection.call(n, ctx, to, from);
+                    }
+                }
+            }
         },
         get: (id: number): Node =>  {
             return backend.get(id);
@@ -339,20 +362,20 @@ export function nodeStore(ctx: Context, init: ContextInit) {
         onAddedConnection: (connection: Connection) => {
             let {from, to} = connection;
 
-            const cb1 = backend.get(from.nodeId)?.onAddedConnection;
-            if (cb1) cb1(ctx, from, to);
+            const n1 = backend.get(from.nodeId);
+            if (n1?.onAddedConnection) n1.onAddedConnection.call(n1, ctx, from, to);
 
-            const cb2 = backend.get(to.nodeId)?.onAddedConnection;
-            if (cb2) cb2(ctx, to, from);
+            const n2 = backend.get(to.nodeId);
+            if (n2?.onAddedConnection) n2.onAddedConnection.call(n2, ctx, to, from);
         },
         onRemovedConnection: (connection: Connection) => {
             let {from, to} = connection;
 
-            const cb1 = backend.get(from.nodeId)?.onRemovedConnection;
-            if (cb1) cb1(ctx, from, to);
+            const n1 = backend.get(from.nodeId);
+            if (n1?.onRemovedConnection) n1.onRemovedConnection.call(n1, ctx, from, to);
 
-            const cb2 = backend.get(to.nodeId)?.onRemovedConnection;
-            if (cb2) cb2(ctx, to, from);
+            const n2 = backend.get(to.nodeId);
+            if (n2?.onRemovedConnection) n2.onRemovedConnection.call(n2, ctx, to, from);
         }
     }
 }
@@ -360,29 +383,33 @@ export function nodeStore(ctx: Context, init: ContextInit) {
 interface Diff<T> {
     added: T[],
     removed: T[],
+    same: [T, T][],
 }
 
-function diff<T>(before: T[], after: T[], same: (a: T, b: T) => boolean): Diff<T> {
+function diff<T>(before: T[], after: T[], eq: (a: T, b: T) => boolean): Diff<T> {
     const added = [];
     const removed = [];
+    const same = [];
     
     for (const old of before) {
-        const found = after.find((v) => same(old, v));
+        const found = after.find((v) => eq(old, v));
 
         if (found === undefined) {
             removed.push(old);
+        } else {
+            same.push([old, found]);
         }
     }
 
     for (const ne of after) {
-        const found = before.find((v) => same(ne, v));
+        const found = before.find((v) => eq(ne, v));
 
         if (found === undefined) {
             added.push(ne);
         }
     }
 
-    return { added, removed };
+    return { added, removed, same };
 }
 
 /**

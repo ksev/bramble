@@ -1,19 +1,19 @@
 <script lang="ts">
-    import colors, { kindColor } from "$data/colors";
+    import { Color, kindColor } from "$data/colors";
     import { automateContext } from "$data/automate/automate";
-    import type { Connection } from "$data/automate/node";
+    import type { Connection, Slot } from "$data/automate/node";
 
     export let connection: Connection;
    
     const { anchors, connections, nodes } = automateContext();
 
-    const inputSlot = nodes.getSlot(connection.to);
-    const outputSlot = nodes.getSlot(connection.from);
-
-    const color = kindColor(outputSlot.kind);
     const first = anchors(connection.from);
     const last = anchors(connection.to);
     let offsetY = 0;
+
+    let color: Color;
+    let inputSlot: Slot;
+    let outputSlot: Slot;
 
     let d = "";
 
@@ -22,6 +22,11 @@
     }
 
     $: {      
+        inputSlot = nodes.getSlot(connection.to);
+        outputSlot = nodes.getSlot(connection.from);
+
+        color = kindColor(outputSlot.kind);
+
         if (inputSlot.multiple) {
             let distanceY = $first.y - $last.y;
             let clamped = Math.min(300, Math.max(-300, distanceY));
@@ -30,6 +35,8 @@
             offsetY = p * 18 - 9;
         }
 
+        
+        
         let sqdist = $first.distanceSquared($last);
 
         let distance = Math.abs($first.x - $last.x);               

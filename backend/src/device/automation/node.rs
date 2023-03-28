@@ -11,7 +11,8 @@ use tracing::debug;
 use super::CompareOp;
 
 type NodeFn0 = fn(&Inputs, &mut Outputs) -> Result<()>;
-type NodeFn1<T> = fn(&mut T, &Inputs, &mut Outputs) -> Result<()>;
+type NodeFn1Mut<T> = fn(&mut T, &Inputs, &mut Outputs) -> Result<()>;
+type NodeFn1<T> = fn(&T, &Inputs, &mut Outputs) -> Result<()>;
 
 struct AutomationNode0(NodeFn0);
 
@@ -24,6 +25,17 @@ impl ProgramNode for AutomationNode0 {
 struct AutomationNode1<T>(T, NodeFn1<T>);
 
 impl<T> ProgramNode for AutomationNode1<T>
+where
+    T: Send,
+{
+    fn run(&mut self, inputs: &Inputs, outputs: &mut Outputs) -> Result<()> {
+        self.1(&self.0, inputs, outputs)
+    }
+}
+
+struct AutomationNode1Mut<T>(T, NodeFn1Mut<T>);
+
+impl<T> ProgramNode for AutomationNode1Mut<T>
 where
     T: Send,
 {
@@ -43,7 +55,14 @@ where
     Box::new(AutomationNode1(data, f))
 }
 
-pub fn device(id: &mut IString, input: &Inputs, output: &mut Outputs) -> Result<()> {
+pub fn node1_mut<T>(data: T, f: NodeFn1Mut<T>) -> Box<dyn ProgramNode>
+where
+    T: Send + 'static,
+{
+    Box::new(AutomationNode1Mut(data, f))
+}
+
+pub fn device(id: &IString, input: &Inputs, output: &mut Outputs) -> Result<()> {
     for name in output.slots() {
         let id = ValueId::new(*id, name);
         let v = input.program(&id)?.clone();
@@ -54,7 +73,7 @@ pub fn device(id: &mut IString, input: &Inputs, output: &mut Outputs) -> Result<
     Ok(())
 }
 
-pub fn target(id: &mut ValueId, input: &Inputs, output: &mut Outputs) -> Result<()> {
+pub fn target(id: &ValueId, input: &Inputs, output: &mut Outputs) -> Result<()> {
     let v = input.slot_one(id.feature)?.unwrap_or(&Json::Null);
 
     output.program(id.clone(), v.clone());
@@ -172,7 +191,7 @@ pub fn static_value(value: &mut Json, _: &Inputs, output: &mut Outputs) -> Resul
     Ok(())
 }
 
-pub fn compare(op: &mut CompareOp, input: &Inputs, output: &mut Outputs) -> Result<()> {
+pub fn compare(op: &CompareOp, input: &Inputs, output: &mut Outputs) -> Result<()> {
     let a = input.slot_or("input", &Json::Null);
     let b = input.slot_or("other", &Json::Null);
 
@@ -195,6 +214,20 @@ pub fn compare(op: &mut CompareOp, input: &Inputs, output: &mut Outputs) -> Resu
     };
 
     output.slot("result", json!(out));
+
+    Ok(())
+}
+
+pub fn alt(input: &Inputs, output: &mut Outputs) -> Result<()> {
+    let bin = input.slot_or("input", &Json::Null);
+
+    let out = if matches!(bin, &Json::Bool(true)) {
+        input.slot_or("a", &Json::Null)
+    } else {
+        input.slot_or("b", &Json::Null)
+    };
+
+    output.slot("result", out.clone());
 
     Ok(())
 }

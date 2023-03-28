@@ -15,8 +15,7 @@ use crate::{
 type Slot = (u32, String);
 type Connection = (Slot, Slot);
 
-use node::node0;
-use node::node1;
+use node::{node0, node1, node1_mut};
 
 fn prop_to_node(target: ValueId, prop: &Properties) -> Box<dyn ProgramNode> {
     use Properties::*;
@@ -24,15 +23,16 @@ fn prop_to_node(target: ValueId, prop: &Properties) -> Box<dyn ProgramNode> {
     match prop {
         Target => node1(target, node::target),
         Device(id) => node1(id.into(), node::device),
-        Value(v) => node1(v.clone(), node::static_value),
+        Value(v) => node1_mut(v.clone(), node::static_value),
         IsNull(_) => node0(node::is_null),
+        If { .. } => node0(node::alt),
         Equals { .. } => node0(node::equals),
-        Toggle => node1(false, node::toggle),
+        Toggle => node1_mut(false, node::toggle),
         And => node0(node::and),
         Or => node0(node::or),
         Not => node0(node::not),
         Xor => node0(node::xor),
-        Latch => node1(false, node::latch),
+        Latch => node1_mut(false, node::latch),
         MathCompare { operator } => node1(*operator, node::compare),
     }
 }
@@ -261,6 +261,7 @@ pub enum Properties {
     // Universal
     IsNull(String),
     Equals { kind: String, meta: Option<Json> },
+    If { kind: String },
 
     // Logic
     And,

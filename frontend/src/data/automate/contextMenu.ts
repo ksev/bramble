@@ -1,7 +1,7 @@
 import { devices } from "$data/devices";
 import { get } from "svelte/store";
 import type { Context } from "./automate";
-import { deviceNode, equals, isNull } from "./node";
+import { alt, deviceNode, equals, isNull } from "./node";
 import * as logic from "./nodes/logic";
 import * as math from "./nodes/math";
 
@@ -155,6 +155,14 @@ export const ROOT: MenuItem[] = [
         action: {
             type: "load",
             fn: (ctx: Context) => ctx.nodes.add(equals()),
+        }
+    },
+    {
+        text: "If",
+        icon: "a-b",
+        action: {
+            type: "load",
+            fn: (ctx: Context) => ctx.nodes.add(alt()),
         }
     },
     {

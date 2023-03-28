@@ -12,12 +12,12 @@
 
     const id = new SlotRef(nodeId, slot.id);
 
-    let hasDefault = slot.default !== undefined;
-    let showDefault = hasDefault;
     let connectedTo = connections.remote(id);
+    let showDefault = false;
 
-    $: if (hasDefault) {
-        showDefault = !$connectedTo;
+    $: {
+        let hasDefault = slot.default !== undefined;
+        showDefault = hasDefault && !$connectedTo;
     }
 </script>
 
@@ -32,6 +32,11 @@
                     <option id={n}>{n}</option>
                 {/each}
             </select>
+        </div>
+    {:else if showDefault && slot.kind === ValueKind.Bool }
+        <div class="default">
+            <label for="default"><SlotLabel slot={slot} />:</label>
+            <input type="checkbox" bind:value={slot.default} />
         </div>
     {:else if showDefault}    
         <div class="default">

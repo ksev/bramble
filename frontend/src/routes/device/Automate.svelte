@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ContextInit } from "$data/automate/automate";
-    import { automationTarget, deviceNode, SlotRef, type NodePrototype, isNull, equals } from "$data/automate/node";
+    import { automationTarget, deviceNode, SlotRef, type NodePrototype, isNull, equals, alt } from "$data/automate/node";
     import { AND, NOT, OR, XOR, LATCH, TOGGLE } from "$data/automate/nodes/logic";
     import { compare } from "$data/automate/nodes/math";
     import { devices } from "$data/devices";
@@ -43,6 +43,7 @@
             "Latch": async () => LATCH,
             "Equals": async ({kind, meta}) => equals(kind, meta),
             "IsNull": async (kind) => isNull(kind),
+            "If": async ({kind}) => alt(kind),
             "Device": async (id) => {
                 const target = await devices.byId(id);
                 return deviceNode(target); 
