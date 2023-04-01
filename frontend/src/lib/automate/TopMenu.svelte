@@ -1,6 +1,7 @@
 <script lang="ts">
     import { automateContext } from "$data/automate/automate";
     import colors from "$data/colors";
+    import { Point, Rect } from "$data/geometry";
     import Icon from "$lib/Icon.svelte";
     import { createEventDispatcher } from "svelte";
     import { get } from "svelte/store";
@@ -11,19 +12,166 @@
     const { layout, selected } = automateContext();
 
     function alignTop() {
+        // Get the rects for the selected nodeboxes and sort them by +y
+        // So the node that is the furthest up is first
         const layouts = Array.from($selected)
-            .map((n) => layout.get(n))
-            .sort((a, b) => get(a).origin.y - get(b).origin.y);
+            .map(n => [n, get(layout.get(n))] as [number, Rect])
+            .sort(([_i, a], [_ii, b]) => a.origin.y - b.origin.y);
 
         if (layouts.length === 0) {
             return;
         }
 
-        let base = get(layouts[0]).origin.y;
-        base = Math.floor(base / 20) * 20;
+        let [_, first] = layouts[0];
+        const base = Math.floor(first.origin.y / 20) * 20;
 
-        for (const layout of layouts) {
-            layout.moveY(base);
+        for (let i = 0; i < layouts.length; i++) {
+            const [id, rect] = layouts[i];        
+
+            // Create a rect for the space between where we are an where we want to go
+            const moveSpace = Rect.corners(
+                new Point(rect.origin.x, base),
+                new Point(rect.br().x, rect.origin.y),
+            );
+
+            const hits = layouts.filter(([_, r]) => r.intersect(moveSpace))
+                                .sort(([_i, a], [_ii, b]) => b.origin.y - a.origin.y);
+
+            let horizon = base;
+
+            if (hits.length > 0) {
+                horizon = hits[0][1].bl().y + 20;
+            }
+
+            layouts[i] = [id, rect.moveTo(new Point(rect.origin.x, horizon))];
+        }
+
+
+        for (const [id, newRect] of layouts) {
+            layout.get(id).moveY(newRect.origin.y);   
+        }
+    }
+
+    function alignBottom() {
+        // Get the rects for the selected nodeboxes and sort them by +y
+        // So the node that is the furthest up is first
+        const layouts = Array.from($selected)
+            .map(n => [n, get(layout.get(n))] as [number, Rect])
+            .sort(([_i, a], [_ii, b]) => b.bl().y - a.bl().y);
+
+        if (layouts.length === 0) {
+            return;
+        }
+
+        let [_, first] = layouts[0];
+        const base = Math.ceil(first.bl().y / 20) * 20;
+
+        for (let i = 0; i < layouts.length; i++) {
+            const [id, rect] = layouts[i];        
+
+            // Create a rect for the space between where we are an where we want to go
+            const moveSpace = Rect.corners(
+                rect.bl(),
+                new Point(rect.br().x, base),
+            );
+
+            const hits = layouts.filter(([_, r]) => r.intersect(moveSpace))
+                                .sort(([_i, a], [_ii, b]) => a.bl().y - b.bl().y);
+
+            let horizon = base;
+
+            if (hits.length > 0) {
+                horizon = hits[0][1].origin.y - 20;
+            }
+
+            layouts[i] = [id, rect.moveTo(new Point(rect.origin.x, horizon - rect.size.height))];
+        }
+
+
+        for (const [id, newRect] of layouts) {
+            layout.get(id).moveY(newRect.origin.y);   
+        }
+    }
+    
+    function alignLeft() {
+        // Get the rects for the selected nodeboxes and sort them by +y
+        // So the node that is the furthest up is first
+        const layouts = Array.from($selected)
+            .map(n => [n, get(layout.get(n))] as [number, Rect])
+            .sort(([_i, a], [_ii, b]) => a.origin.x - b.origin.x);
+
+        if (layouts.length === 0) {
+            return;
+        }
+
+        let [_, first] = layouts[0];
+        const base = Math.floor(first.origin.x / 20) * 20;
+
+        for (let i = 0; i < layouts.length; i++) {
+            const [id, rect] = layouts[i];        
+
+            // Create a rect for the space between where we are an where we want to go
+            const moveSpace = Rect.corners(
+                rect.tl(),
+                new Point(base, rect.bl().y),
+            );
+
+            const hits = layouts.filter(([_, r]) => r.intersect(moveSpace))
+                                .sort(([_i, a], [_ii, b]) => b.tr().x - a.tr().x);
+
+            let horizon = base;
+
+            if (hits.length > 0) {
+                horizon = hits[0][1].tr().x + 20;
+            }
+
+            layouts[i] = [id, rect.moveTo(new Point(horizon, rect.origin.y))];
+        }
+
+        for (const [id, newRect] of layouts) {
+            layout.get(id).moveX(newRect.origin.x);   
+        }
+    }
+
+    function alignRight() {
+        // Get the rects for the selected nodeboxes and sort them by +y
+        // So the node that is the furthest up is first
+        const layouts = Array.from($selected)
+            .map(n => [n, get(layout.get(n))] as [number, Rect])
+            .sort(([_i, a], [_ii, b]) => b.tr().x - a.tr().x);
+
+        if (layouts.length === 0) {
+            return;
+        }
+
+        let [_, first] = layouts[0];
+        const base = Math.ceil(first.tr().x / 20) * 20;
+
+        for (let i = 0; i < layouts.length; i++) {
+            const [id, rect] = layouts[i];        
+
+            // Create a rect for the space between where we are an where we want to go
+            const moveSpace = Rect.corners(
+                rect.tr(),
+                new Point(base, rect.br().y),
+            );
+
+            const hits = layouts.filter(([_, r]) => r.intersect(moveSpace))
+                                .sort(([_i, a], [_ii, b]) => a.tr().x - b.tr().x);
+
+            let horizon = base;
+
+            if (hits.length > 0) {
+                horizon = hits[0][1].origin.x - 20;
+                
+            }
+
+            layouts[i] = [id, rect.moveTo(new Point(horizon - rect.size.width, rect.origin.y))];
+        }
+
+
+        for (const [id, newRect] of layouts) {
+            layout.get(id).moveX(newRect.origin.x);   
         }
     }
 
@@ -55,21 +203,21 @@
             <button title="Align top" on:click|stopPropagation={alignTop}>
                 <Icon name="box-align-top" color={colors.fadedtext} size={18} />
             </button>
-            <button title="Align bottom">
+            <button title="Align bottom" on:click|stopPropagation={alignBottom}>
                 <Icon
                     name="box-align-bottom"
                     color={colors.fadedtext}
                     size={18}
                 />
             </button>
-            <button title="Align left">
+            <button title="Align left" on:click|stopPropagation={alignLeft}>
                 <Icon
                     name="box-align-left"
                     color={colors.fadedtext}
                     size={18}
                 />
             </button>
-            <button title="Align right">
+            <button title="Align right" on:click|stopPropagation={alignRight}>
                 <Icon
                     name="box-align-right"
                     color={colors.fadedtext}

@@ -435,6 +435,12 @@ export function layoutStore(initialData: Rect) {
                 return r.moveTo(new Point(x, y));
             });
         },
+        moveX: (x: number) => {
+            w.update(r => {
+                const y = r.origin.y;
+                return r.moveTo(new Point(x, y));
+            });
+        },
         move: (x: number, y: number) => {  
             let current = get(w);
 

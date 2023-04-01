@@ -52,6 +52,46 @@ export class Rect {
     }
 
     /**
+     * Return the top left point of the rect
+     * @returns A point of the top left corner
+     */
+    tl() {
+        return this.origin;
+    }
+
+    /**
+     * Return top right corner of the rect
+     * @returns A point of the top right corner
+     */
+    tr() {
+        return new Point(
+            this.origin.x + this.size.width,
+            this.origin.y
+        );
+    }
+
+    /** 
+     * Return bottom left corner of the rect 
+     * @returns A point of the bottom left corner
+     */
+    bl() {
+        return new Point(
+            this.origin.x,
+            this.origin.y + this.size.height,  
+        );
+    }
+
+    /**
+     * Return bottom right corner of the rect
+     */
+    br() {
+        return new Point(
+            this.origin.x + this.size.width,
+            this.origin.y + this.size.height
+        );
+    }
+
+    /**
      * Resize the rect
      * @param extent The new size the rect should have
      * @returns A new square with the same origin but a diffenent size
@@ -84,6 +124,7 @@ export class Rect {
     /**
      * Return a new rect where the two rects overlap
      * @param other Another rect
+     * @returns A rect representing the area they overlap, or undefined if there is no overlap
      */
     intersect(other: Rect): Rect | undefined {
         if (!other) return undefined;
