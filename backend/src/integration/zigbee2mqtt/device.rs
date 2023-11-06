@@ -69,7 +69,6 @@ pub struct Definition {
     pub model: String,
     pub vendor: String,
     pub description: String,
-    pub options: Vec<Feature>,
     pub exposes: Vec<Feature>,
 }
 
@@ -335,7 +334,7 @@ pub enum Feature {
     List {
         name: String,
         property: String,
-        item_type: String,
+        item_type: Box<Feature>,
         access: Access,
     },
     #[serde(rename = "light")]
